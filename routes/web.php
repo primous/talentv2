@@ -760,6 +760,17 @@ Route::get('/projet/{id?}', [\App\Http\Controllers\CandidateController::class, '
 Route::post('/projet', [\App\Http\Controllers\CandidateController::class, 'storeProjectRequest'])->name('projet.store');
 Route::post('/projet/{id?}', [\App\Http\Controllers\CandidateController::class, 'storeProjectRequest']);
 
+// --- ESPACE SUIVI CLIENT SANS COMPTE (LIEN SÉCURISÉ) ---
+Route::get('/mes-demandes', [\App\Http\Controllers\ClientPortalController::class, 'index'])->name('client.demandes.index');
+Route::post('/mes-demandes/demande-lien', [\App\Http\Controllers\ClientPortalController::class, 'sendMagicLink'])->name('client.demandes.request_link')->middleware('throttle:5,1');
+Route::get('/mes-demandes/acces/{token}', [\App\Http\Controllers\ClientPortalController::class, 'accessViaToken'])->name('client.magic_access')->middleware('throttle:20,1');
+Route::post('/mes-demandes/revoquer-acces', [\App\Http\Controllers\ClientPortalController::class, 'revokeAccess'])->name('client.demandes.revoke_access');
+Route::get('/mes-demandes/{reference}', [\App\Http\Controllers\ClientPortalController::class, 'show'])->name('client.demandes.show');
+Route::post('/mes-demandes/{reference}/etapes/{stepId}/action', [\App\Http\Controllers\ClientPortalController::class, 'handleStepAction'])->name('client.demandes.step_action');
+Route::post('/mes-demandes/{reference}/etapes/{stepId}/fichier', [\App\Http\Controllers\ClientPortalController::class, 'uploadStepFile'])->name('client.demandes.upload_file');
+Route::get('/mes-demandes/{reference}/fichiers/{stepId}/{type}/{fileIndex?}', [\App\Http\Controllers\ClientPortalController::class, 'downloadStepFile'])->name('client.demandes.download_file');
+Route::post('/mes-demandes/deconnexion', [\App\Http\Controllers\ClientPortalController::class, 'logout'])->name('client.demandes.logout');
+
 // --- CANDIDATURE & PROCESSUS D'INTÉGRATION ---
 Route::get('/candidature', [\App\Http\Controllers\CandidateController::class, 'create'])->name('candidature.create');
 Route::post('/candidature', [\App\Http\Controllers\CandidateController::class, 'store'])->name('candidature.store');
@@ -784,6 +795,16 @@ Route::delete('/candidat/competence/{id}', [\App\Http\Controllers\CandidateContr
 Route::post('/candidat/realisation/store', [\App\Http\Controllers\CandidateController::class, 'storeRealization'])->name('candidat.realisation.store');
 Route::post('/candidat/demandes/{id}/repondre', [\App\Http\Controllers\CandidateController::class, 'respondToRequest'])->name('candidat.demandes.respond');
 Route::post('/candidat/parametres/update', [\App\Http\Controllers\CandidateController::class, 'updateSettings'])->name('candidat.parametres.update');
+
+// Suivi interactif d'une mission par le talent
+Route::get('/candidat/projets/{id}/suivi', [\App\Http\Controllers\CandidateController::class, 'projectTracking'])->name('candidat.projets.tracking');
+Route::post('/candidat/projets/{id}/etapes', [\App\Http\Controllers\CandidateController::class, 'storeProjectStep'])->name('candidat.projets.steps.store');
+Route::post('/candidat/projets/{id}/etapes/{stepId}', [\App\Http\Controllers\CandidateController::class, 'updateProjectStep'])->name('candidat.projets.steps.update');
+Route::delete('/candidat/projets/{id}/etapes/{stepId}', [\App\Http\Controllers\CandidateController::class, 'destroyProjectStep'])->name('candidat.projets.steps.destroy');
+Route::post('/candidat/projets/{id}/etapes/{stepId}/terminer', [\App\Http\Controllers\CandidateController::class, 'completeProjectStep'])->name('candidat.projets.steps.complete');
+Route::post('/candidat/projets/{id}/etapes/{stepId}/demander-action', [\App\Http\Controllers\CandidateController::class, 'requestClientAction'])->name('candidat.projets.steps.request_action');
+Route::post('/candidat/projets/{id}/etapes/reordonner', [\App\Http\Controllers\CandidateController::class, 'reorderProjectSteps'])->name('candidat.projets.steps.reorder');
+Route::get('/candidat/projets/{id}/etapes/{stepId}/fichier/{type}/{fileIndex?}', [\App\Http\Controllers\CandidateController::class, 'downloadProjectStepFile'])->name('candidat.projets.steps.download_file');
 
 // --- BACKOFFICE & DASHBOARD ADMINISTRATEUR ---
 Route::get('/admin/login', [\App\Http\Controllers\AdminController::class, 'showLoginForm'])->name('admin.login');

@@ -36,6 +36,49 @@ class ProjectRequest extends Model
         return $this->belongsTo(TalentCompetency::class, 'talent_competency_id');
     }
 
+    public function steps(): \Illuminate\Database\Eloquent\Relations\HasMany
+    {
+        return $this->hasMany(ProjectStep::class, 'project_request_id')->orderBy('position');
+    }
+
+    /**
+     * Calcule la progression réelle basée sur les étapes de la mission.
+     * Les étapes annulées sont exclues du calcul et ne sont pas comptées comme terminées.
+     */
+    public function calculateProgress(): int
+    {
+        if ($this->status === 'terminee') {
+            return 100;
+        }
+
+        $activeSteps = $this->steps()->where('status', '!=', 'annule')->get();
+        $totalActive = $activeSteps->count();
+
+        if ($totalActive === 0) {
+            return 0;
+        }
+
+        $completedCount = $activeSteps->where('status', 'termine')->count();
+
+        return (int) round(($completedCount / $totalActive) * 100);
+    }
+
+    /**
+     * Vérifie si la mission possède au moins une étape définie.
+     */
+    public function hasSteps(): bool
+    {
+        return $this->steps()->exists();
+    }
+
+    /**
+     * Retourne le nombre d'actions en attente de la part du client.
+     */
+    public function getPendingClientActionsCount(): int
+    {
+        return $this->steps()->where('status', 'action_requise_client')->count();
+    }
+
     public function getStatusLabel(): string
     {
         return match ($this->status) {

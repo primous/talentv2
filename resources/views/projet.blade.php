@@ -2486,6 +2486,7 @@
                 <div class="flex flex-wrap items-center justify-center gap-6 sm:gap-8 font-medium">
                     <a href="#" class="hover:text-black dark:hover:text-white transition-colors">Mentions légales</a>
                     <a href="#" class="hover:text-black dark:hover:text-white transition-colors">Confidentialité</a>
+                    <a href="{{ route('client.demandes.index') }}" class="hover:text-black dark:hover:text-white transition-colors">Suivi client</a>
                     <a href="{{ route('candidature.create') }}" class="hover:text-black dark:hover:text-white transition-colors">Devenir talent</a>
                     <a href="{{ url('/talents') }}" class="hover:text-black dark:hover:text-white transition-colors">Catalogue</a>
                 </div>

@@ -808,13 +808,13 @@
                                             >
                                                 Consulter le brief / Décider
                                             </button>
-                                        @elseif ($req['status'] === 'en_cours')
-                                            <button 
-                                                @click="tab = 'devis_missions'"
-                                                class="h-9 px-4 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-extrabold transition-all"
+                                        @elseif ($req['status'] === 'en_cours' || in_array($req['db_status'], ['mission_confirmee', 'en_cours', 'terminee', 'reponse_talent']))
+                                            <a 
+                                                href="{{ route('candidat.projets.tracking', $req['id']) }}"
+                                                class="h-9 px-4 rounded-xl bg-black hover:bg-[#FFB515] hover:text-black text-white text-xs font-extrabold transition-all flex items-center gap-1.5"
                                             >
-                                                Suivre les jalons
-                                            </button>
+                                                <span>Gérer le suivi du projet →</span>
+                                            </a>
                                         @endif
                                     </div>
                                 </div>
@@ -1275,6 +1275,74 @@
                             </table>
                         </div>
                     </div>
+
+                    <!-- TABLEAU DES MISSIONS CONFIRMÉES & SUIVI DE PROJET INTERACTIF -->
+                    <div class="space-y-3 pt-6 border-t border-neutral-100">
+                        <div class="flex items-center justify-between">
+                            <div>
+                                <div class="text-xs font-black uppercase tracking-wider text-neutral-700">Missions confirmées & Itinéraires en cours</div>
+                                <p class="text-[11px] text-neutral-400 mt-0.5">Pilotez les jalons, les livrables et les validations de chaque mission.</p>
+                            </div>
+                            <span class="text-[11px] font-mono text-neutral-500 font-bold">Progression calculée en temps réel</span>
+                        </div>
+
+                        <div class="overflow-x-auto">
+                            <table class="w-full text-left text-xs border-collapse">
+                                <thead>
+                                    <tr class="border-b border-neutral-200 text-neutral-400 font-mono text-[11px]">
+                                        <th class="py-2.5">RÉFÉRENCE</th>
+                                        <th class="py-2.5">CLIENT</th>
+                                        <th class="py-2.5">PROJET</th>
+                                        <th class="py-2.5">PROGRESSION</th>
+                                        <th class="py-2.5">STATUT</th>
+                                        <th class="py-2.5 text-right">ACTION</th>
+                                    </tr>
+                                </thead>
+                                <tbody class="divide-y divide-neutral-100">
+                                    @php
+                                        $confirmedMissions = array_filter(
+                                            array_merge($projectRequests['en_cours'] ?? [], $projectRequests['terminees'] ?? []),
+                                            fn($p) => in_array($p['db_status'] ?? '', ['reponse_talent', 'mission_confirmee', 'en_cours', 'terminee'])
+                                        );
+                                    @endphp
+                                    @forelse ($confirmedMissions as $m)
+                                        <tr class="hover:bg-neutral-50">
+                                            <td class="py-3 font-mono font-bold text-black">{{ $m['reference'] }}</td>
+                                            <td class="py-3 font-bold text-neutral-800">{{ $m['client_name'] }}</td>
+                                            <td class="py-3 text-neutral-600 truncate max-w-xs">{{ $m['title'] }}</td>
+                                            <td class="py-3">
+                                                <div class="flex items-center gap-2">
+                                                    <div class="w-20 h-2 bg-neutral-200 rounded-full overflow-hidden">
+                                                        <div class="h-full bg-[#FFB515] rounded-full" style="width: {{ $m['progress'] }}%;"></div>
+                                                    </div>
+                                                    <span class="font-mono text-[11px] font-black">{{ $m['progress'] }}%</span>
+                                                </div>
+                                            </td>
+                                            <td class="py-3">
+                                                <span class="px-2 py-0.5 rounded-full text-[10px] font-bold bg-[#FAF8F2] text-neutral-700 border border-[#E8E5DC]">
+                                                    {{ $m['status_label'] }}
+                                                </span>
+                                            </td>
+                                            <td class="py-3 text-right">
+                                                <a 
+                                                    href="{{ route('candidat.projets.tracking', $m['id']) }}"
+                                                    class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-black hover:bg-[#FFB515] hover:text-black text-white font-bold text-[11px] transition-all"
+                                                >
+                                                    <span>Gérer le suivi du projet →</span>
+                                                </a>
+                                            </td>
+                                        </tr>
+                                    @empty
+                                        <tr>
+                                            <td colspan="6" class="py-8 text-center text-neutral-400 font-sans">
+                                                Aucune mission confirmée active pour le moment.
+                                            </td>
+                                        </tr>
+                                    @endforelse
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
                 </div>
             </div>
 
@@ -1534,13 +1602,25 @@
                             </div>
 
                             <div class="flex items-center gap-2 pt-2 flex-wrap">
-                                <button type="submit" @click="$refs.briefActionType.value = 'accepter'" class="flex-1 h-11 bg-emerald-600 hover:bg-emerald-700 text-white font-extrabold text-xs rounded-xl transition-all shadow-sm flex items-center justify-center gap-1.5 cursor-pointer">
-                                    <span>✓</span>
-                                    <span>Accepter la demande</span>
-                                </button>
-                                <button type="submit" @click="$refs.briefActionType.value = 'decliner'" onclick="return confirm('Confirmez-vous vouloir décliner cette demande de projet ?');" class="h-11 px-4 bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-200 text-xs font-bold rounded-xl transition-all cursor-pointer">
-                                    Décliner la demande
-                                </button>
+                                <template x-if="['reponse_talent', 'mission_confirmee', 'en_cours', 'terminee'].includes(selectedRequest.db_status)">
+                                    <a 
+                                        :href="'/candidat/projets/' + selectedRequest.id + '/suivi'"
+                                        class="flex-1 h-11 bg-black hover:bg-[#FFB515] hover:text-black text-white font-extrabold text-xs rounded-xl transition-all shadow-sm flex items-center justify-center gap-2"
+                                    >
+                                        <span>Gérer le suivi du projet →</span>
+                                    </a>
+                                </template>
+                                <template x-if="!['reponse_talent', 'mission_confirmee', 'en_cours', 'terminee'].includes(selectedRequest.db_status)">
+                                    <div class="contents">
+                                        <button type="submit" @click="$refs.briefActionType.value = 'accepter'" class="flex-1 h-11 bg-emerald-600 hover:bg-emerald-700 text-white font-extrabold text-xs rounded-xl transition-all shadow-sm flex items-center justify-center gap-1.5 cursor-pointer">
+                                            <span>✓</span>
+                                            <span>Accepter la demande</span>
+                                        </button>
+                                        <button type="submit" @click="$refs.briefActionType.value = 'decliner'" onclick="return confirm('Confirmez-vous vouloir décliner cette demande de projet ?');" class="h-11 px-4 bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-200 text-xs font-bold rounded-xl transition-all cursor-pointer">
+                                            Décliner la demande
+                                        </button>
+                                    </div>
+                                </template>
                                 <button type="button" @click="showBriefModal = false" class="h-11 px-4 border border-neutral-300 text-xs font-bold rounded-xl hover:bg-neutral-50 transition-all cursor-pointer">
                                     Fermer
                                 </button>

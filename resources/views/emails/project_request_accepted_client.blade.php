@@ -20,6 +20,8 @@
                     <!-- Corps de l'e-mail -->
                     <tr>
                         <td style="padding: 36px 32px;">
+                            @include('emails.partials.tracking_banner')
+
                             <h1 style="font-size: 20px; font-weight: 800; color: #111111; margin-top: 0; margin-bottom: 20px;">Le talent accepte d'échanger sur votre projet !</h1>
 
                             <p style="font-size: 14px; color: #333333; margin-bottom: 16px;">

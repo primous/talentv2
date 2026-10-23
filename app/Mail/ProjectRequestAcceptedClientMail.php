@@ -15,11 +15,26 @@ class ProjectRequestAcceptedClientMail extends Mailable
 {
     use Queueable, SerializesModels;
 
+    public ?string $trackingUrl;
+
     public function __construct(
         public ProjectRequest $projectRequest,
         public Candidate $candidate,
-        public array $contactChannels = []
+        public array $contactChannels = [],
+        ?string $trackingUrl = null
     ) {
+        if ($trackingUrl) {
+            $this->trackingUrl = $trackingUrl;
+        } elseif (!empty($this->projectRequest->client_email)) {
+            try {
+                $tokenData = \App\Models\ClientAccessToken::generateForEmail($this->projectRequest->client_email);
+                $this->trackingUrl = $tokenData['url'];
+            } catch (\Throwable $e) {
+                $this->trackingUrl = route('client.demandes.index');
+            }
+        } else {
+            $this->trackingUrl = route('client.demandes.index');
+        }
     }
 
     public function envelope(): Envelope

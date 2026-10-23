@@ -7,12 +7,15 @@ use App\Mail\ProjectRequestClientConfirmationMail;
 use App\Mail\ProjectRequestTalentNotificationMail;
 use App\Mail\ProjectRequestAcceptedClientMail;
 use App\Mail\ProjectRequestDeclinedClientMail;
+use App\Mail\ProjectStepNotificationMail;
+use App\Mail\ProjectStepClientActionNotificationMail;
 use App\Models\AdminActivityLog;
 use App\Models\Candidate;
 use App\Models\CandidateVerification;
 use App\Models\PlatformContent;
 use App\Models\PrestationReview;
 use App\Models\ProjectRequest;
+use App\Models\ProjectStep;
 use App\Models\TalentCompetency;
 use App\Models\User;
 use Illuminate\Http\Request;
@@ -580,7 +583,9 @@ class CandidateController extends Controller
                 'has_quote' => !empty($pr->talent_response_notes),
                 'quote_amount' => $pr->budget ?? 'Non précisé',
                 'talent_response_notes' => $pr->talent_response_notes,
-                'progress' => $pr->status === 'terminee' ? 100 : ($pr->status === 'en_cours' ? 75 : 25),
+                'progress' => $pr->calculateProgress(),
+                'has_steps' => $pr->hasSteps(),
+                'pending_client_actions' => $pr->getPendingClientActionsCount(),
             ];
         };
 
@@ -2332,10 +2337,20 @@ class CandidateController extends Controller
             'created_at' => now(),
         ]);
 
-        // 7. Envoi non-bloquant de l'e-mail de confirmation au client
+        // 7. Envoi non-bloquant de l'e-mail de confirmation au client avec lien de suivi sécurisé
         try {
+            $magicData = \App\Models\ClientAccessToken::generateForEmail(
+                $projectRequest->client_email,
+                $request->ip(),
+                $request->userAgent()
+            );
+            $trackingUrl = route('client.magic_access', [
+                'token' => $magicData['plain_token'],
+                'ref' => $projectRequest->reference,
+            ]);
+
             Mail::to($projectRequest->client_email)->send(
-                new ProjectRequestClientConfirmationMail($projectRequest, $candidate)
+                new ProjectRequestClientConfirmationMail($projectRequest, $candidate, $trackingUrl)
             );
             $projectRequest->client_confirmation_sent_at = now();
             $projectRequest->save();
@@ -2377,6 +2392,460 @@ class CandidateController extends Controller
             ->with('reference', $projectRequest->reference)
             ->with('project_title', $projectRequest->title)
             ->with('talent_name', $candidate->full_name);
+    }
+
+    /**
+     * Récupère la mission autorisée pour le talent connecté (protection IDOR stricte)
+     *
+     * @return array{0: Candidate, 1: ProjectRequest}
+     */
+    protected function getAuthorizedCandidateProject(int $id): array
+    {
+        $user = Auth::user();
+        if (!$user) {
+            abort(403, "Non authentifié.");
+        }
+
+        $candidate = $user->candidate ?? Candidate::where('user_id', $user->id)->first();
+        if (!$candidate) {
+            abort(404, "Talent introuvable.");
+        }
+
+        $project = ProjectRequest::with(['steps', 'candidate', 'competency'])
+            ->where('id', $id)
+            ->where('candidate_id', $candidate->id)
+            ->first();
+
+        if (!$project) {
+            abort(404, "Mission introuvable ou vous n'êtes pas autorisé à la consulter.");
+        }
+
+        return [$candidate, $project];
+    }
+
+    /**
+     * Interface de pilotage de l'itinéraire de la mission pour le talent
+     */
+    public function projectTracking(Request $request, int $id)
+    {
+        [$candidate, $project] = $this->getAuthorizedCandidateProject($id);
+
+        $steps = $project->steps()->orderBy('position')->get();
+        $progress = $project->calculateProgress();
+        $pendingClientActions = $project->getPendingClientActionsCount();
+
+        return view('candidat_project_tracking', compact(
+            'candidate',
+            'project',
+            'steps',
+            'progress',
+            'pendingClientActions'
+        ));
+    }
+
+    /**
+     * Ajout d'une nouvelle étape à l'itinéraire de la mission
+     */
+    public function storeProjectStep(Request $request, int $id)
+    {
+        [$candidate, $project] = $this->getAuthorizedCandidateProject($id);
+
+        $validated = $request->validate([
+            'title' => 'required|string|max:255',
+            'step_type' => 'required|in:info,client_file,link,payment,deliverable,client_validation,talent_task',
+            'description' => 'nullable|string|max:3000',
+            'due_date' => 'nullable|date',
+            'link_url' => 'nullable|url|max:500',
+            'payment_amount' => 'nullable|string|max:100',
+            'payment_motive' => 'nullable|string|max:255',
+            'payment_url' => 'nullable|url|max:500',
+            'deliverable_file' => 'nullable|file|max:20480|mimes:pdf,doc,docx,xls,xlsx,ppt,pptx,zip,rar,png,jpg,jpeg,webp,txt',
+            'deliverable_files' => 'nullable|array|max:10',
+            'deliverable_files.*' => 'file|max:20480|mimes:pdf,doc,docx,xls,xlsx,ppt,pptx,zip,rar,png,jpg,jpeg,webp,txt',
+            'action_requise_client' => 'nullable|boolean',
+            'notify_client' => 'nullable|boolean',
+        ], [
+            'deliverable_files.max' => "Vous ne pouvez pas envoyer plus de 10 fichiers en une seule fois.",
+            'deliverable_files.*.max' => "Chaque fichier ne doit pas dépasser 20 Mo.",
+            'deliverable_files.*.mimes' => "Format de fichier non autorisé. Formats acceptés : PDF, Word, Excel, PowerPoint, ZIP, RAR, images, TXT.",
+            'deliverable_file.max' => "Le fichier ne doit pas dépasser 20 Mo.",
+            'deliverable_file.mimes' => "Format de fichier non autorisé. Formats acceptés : PDF, Word, Excel, PowerPoint, ZIP, RAR, images, TXT.",
+        ]);
+
+        $uploadedDeliverables = [];
+        $filesToProcess = [];
+
+        if ($request->hasFile('deliverable_files')) {
+            $rawFiles = $request->file('deliverable_files');
+            if (is_array($rawFiles)) {
+                $filesToProcess = array_merge($filesToProcess, $rawFiles);
+            } elseif ($rawFiles) {
+                $filesToProcess[] = $rawFiles;
+            }
+        }
+
+        if ($request->hasFile('deliverable_file')) {
+            $filesToProcess[] = $request->file('deliverable_file');
+        }
+
+        foreach ($filesToProcess as $file) {
+            if (!$file || !$file->isValid()) continue;
+            $originalName = $file->getClientOriginalName();
+            $fileSize = $file->getSize();
+            $safeName = time() . '_' . Str::random(6) . '_' . Str::slug(pathinfo($originalName, PATHINFO_FILENAME)) . '.' . $file->getClientOriginalExtension();
+            $path = $file->storeAs('private/project_documents/deliverables', $safeName, 'local');
+            $uploadedDeliverables[] = [
+                'name' => $originalName,
+                'path' => $path,
+                'size' => $fileSize,
+                'uploaded_at' => now()->format('d/m/Y H:i'),
+            ];
+        }
+
+        $deliverablePath = !empty($uploadedDeliverables) ? $uploadedDeliverables[0]['path'] : null;
+        $deliverableName = !empty($uploadedDeliverables) ? $uploadedDeliverables[0]['name'] : null;
+        $deliverableSize = !empty($uploadedDeliverables) ? $uploadedDeliverables[0]['size'] : null;
+
+        // Détermination du statut initial
+        $status = 'en_attente';
+        if ($request->boolean('action_requise_client') || in_array($validated['step_type'], ['client_file', 'client_validation'])) {
+            $status = 'action_requise_client';
+        } elseif ($validated['step_type'] === 'deliverable' && !empty($uploadedDeliverables)) {
+            $status = 'termine';
+        } else {
+            $status = 'en_cours';
+        }
+
+        $nextPosition = ((int) $project->steps()->max('position')) + 1;
+
+        $step = $project->steps()->create([
+            'title' => $validated['title'],
+            'description' => $validated['description'] ?? null,
+            'step_type' => $validated['step_type'],
+            'position' => $nextPosition,
+            'status' => $status,
+            'due_date' => $validated['due_date'] ?? null,
+            'completed_at' => $status === 'termine' ? now() : null,
+            'link_url' => $validated['link_url'] ?? null,
+            'payment_amount' => $validated['payment_amount'] ?? null,
+            'payment_motive' => $validated['payment_motive'] ?? null,
+            'payment_url' => $validated['payment_url'] ?? null,
+            'deliverable_file_path' => $deliverablePath,
+            'deliverable_file_name' => $deliverableName,
+            'deliverable_file_size' => $deliverableSize,
+            'deliverable_files' => !empty($uploadedDeliverables) ? $uploadedDeliverables : null,
+            'history' => [],
+        ]);
+
+        if (count($uploadedDeliverables) > 1) {
+            $fileNames = implode(', ', array_column($uploadedDeliverables, 'name'));
+            $step->logActivity('Création de l\'étape', 'talent', "Étape « {$step->title} » créée avec " . count($uploadedDeliverables) . " livrables : {$fileNames}");
+        } elseif (count($uploadedDeliverables) === 1) {
+            $step->logActivity('Création de l\'étape', 'talent', "Étape « {$step->title} » créée avec le livrable « {$uploadedDeliverables[0]['name']} »");
+        } else {
+            $step->logActivity('Création de l\'étape', 'talent', "Étape « {$step->title} » créée ({$step->getTypeLabel()})");
+        }
+
+        // Passage de la mission en cours si elle était juste confirmée ou en réponse
+        if (in_array($project->status, ['reponse_talent', 'mission_confirmee'])) {
+            $project->update(['status' => 'en_cours']);
+        }
+
+        // Notification non-bloquante du client
+        if ($request->boolean('notify_client', true) || $status === 'action_requise_client' || $step->step_type === 'deliverable') {
+            try {
+                $eventTitle = match($step->step_type) {
+                    'deliverable' => count($uploadedDeliverables) > 1 
+                        ? count($uploadedDeliverables) . " nouveaux livrables disponibles : {$step->title}"
+                        : "Nouveau livrable disponible : {$step->title}",
+                    'client_file' => "Document attendu : {$step->title}",
+                    'client_validation' => "Validation requise : {$step->title}",
+                    'payment' => "Modalité de paiement : {$step->title}",
+                    default => "Nouvelle étape publiée : {$step->title}",
+                };
+                $eventMessage = "Le talent {$candidate->full_name} a mis à jour le suivi de votre projet pour l'étape « {$step->title} ».";
+
+                Mail::to($project->client_email)->send(
+                    new ProjectStepNotificationMail($project, $step, $eventTitle, $eventMessage)
+                );
+            } catch (\Throwable $e) {
+                Log::error("Erreur envoi notification nouvelle étape projet {$project->reference}: " . $e->getMessage());
+            }
+        }
+
+        return redirect()->route('candidat.projets.tracking', $project->id)
+            ->with('success', "L'étape « {$step->title} » a été ajoutée avec succès au suivi.");
+    }
+
+    /**
+     * Modification d'une étape existante
+     */
+    public function updateProjectStep(Request $request, int $id, int $stepId)
+    {
+        [$candidate, $project] = $this->getAuthorizedCandidateProject($id);
+        $step = $project->steps()->where('id', $stepId)->firstOrFail();
+
+        $validated = $request->validate([
+            'title' => 'required|string|max:255',
+            'step_type' => 'required|in:info,client_file,link,payment,deliverable,client_validation,talent_task',
+            'description' => 'nullable|string|max:3000',
+            'due_date' => 'nullable|date',
+            'status' => 'required|in:en_attente,en_cours,action_requise_client,termine,annule',
+            'link_url' => 'nullable|url|max:500',
+            'payment_amount' => 'nullable|string|max:100',
+            'payment_motive' => 'nullable|string|max:255',
+            'payment_url' => 'nullable|url|max:500',
+            'deliverable_file' => 'nullable|file|max:20480|mimes:pdf,doc,docx,xls,xlsx,ppt,pptx,zip,rar,png,jpg,jpeg,webp,txt',
+            'deliverable_files' => 'nullable|array|max:10',
+            'deliverable_files.*' => 'file|max:20480|mimes:pdf,doc,docx,xls,xlsx,ppt,pptx,zip,rar,png,jpg,jpeg,webp,txt',
+            'notify_client' => 'nullable|boolean',
+        ], [
+            'deliverable_files.max' => "Vous ne pouvez pas envoyer plus de 10 fichiers en une seule fois.",
+            'deliverable_files.*.max' => "Chaque fichier ne doit pas dépasser 20 Mo.",
+            'deliverable_files.*.mimes' => "Format de fichier non autorisé. Formats acceptés : PDF, Word, Excel, PowerPoint, ZIP, RAR, images, TXT.",
+            'deliverable_file.max' => "Le fichier ne doit pas dépasser 20 Mo.",
+            'deliverable_file.mimes' => "Format de fichier non autorisé. Formats acceptés : PDF, Word, Excel, PowerPoint, ZIP, RAR, images, TXT.",
+        ]);
+
+        $newDeliverables = [];
+        $filesToProcess = [];
+
+        if ($request->hasFile('deliverable_files')) {
+            $rawFiles = $request->file('deliverable_files');
+            if (is_array($rawFiles)) {
+                $filesToProcess = array_merge($filesToProcess, $rawFiles);
+            } elseif ($rawFiles) {
+                $filesToProcess[] = $rawFiles;
+            }
+        }
+
+        if ($request->hasFile('deliverable_file')) {
+            $filesToProcess[] = $request->file('deliverable_file');
+        }
+
+        foreach ($filesToProcess as $file) {
+            if (!$file || !$file->isValid()) continue;
+            $originalName = $file->getClientOriginalName();
+            $fileSize = $file->getSize();
+            $safeName = time() . '_' . Str::random(6) . '_' . Str::slug(pathinfo($originalName, PATHINFO_FILENAME)) . '.' . $file->getClientOriginalExtension();
+            $path = $file->storeAs('private/project_documents/deliverables', $safeName, 'local');
+            $newDeliverables[] = [
+                'name' => $originalName,
+                'path' => $path,
+                'size' => $fileSize,
+                'uploaded_at' => now()->format('d/m/Y H:i'),
+            ];
+        }
+
+        if (!empty($newDeliverables)) {
+            $existing = $step->getDeliverableFilesList();
+            $merged = [];
+            foreach ($existing as $ex) {
+                $merged[] = [
+                    'name' => $ex['name'],
+                    'path' => $ex['path'],
+                    'size' => $ex['size'],
+                    'uploaded_at' => $ex['uploaded_at'] ?? now()->format('d/m/Y H:i'),
+                ];
+            }
+            foreach ($newDeliverables as $nd) {
+                $merged[] = $nd;
+            }
+
+            $step->deliverable_files = $merged;
+            $step->deliverable_file_path = $merged[0]['path'];
+            $step->deliverable_file_name = $merged[0]['name'];
+            $step->deliverable_file_size = $merged[0]['size'];
+
+            $fileNames = implode(', ', array_column($newDeliverables, 'name'));
+            $step->logActivity('Ajout de livrable(s)', 'talent', count($newDeliverables) . " livrable(s) transmis : {$fileNames}");
+        }
+
+        $oldStatus = $step->status;
+        $step->title = $validated['title'];
+        $step->step_type = $validated['step_type'];
+        $step->description = $validated['description'] ?? null;
+        $step->due_date = $validated['due_date'] ?? null;
+        $step->status = $validated['status'];
+        $step->link_url = $validated['link_url'] ?? null;
+        $step->payment_amount = $validated['payment_amount'] ?? null;
+        $step->payment_motive = $validated['payment_motive'] ?? null;
+        $step->payment_url = $validated['payment_url'] ?? null;
+
+        if ($step->status === 'termine' && !$step->completed_at) {
+            $step->completed_at = now();
+        } elseif ($step->status !== 'termine' && $oldStatus === 'termine') {
+            $step->completed_at = null;
+        }
+
+        $step->save();
+        $step->logActivity('Modification de l\'étape', 'talent', "Étape modifiée. Statut : {$step->getStatusLabel()}");
+
+        if ($request->boolean('notify_client')) {
+            try {
+                $eventTitle = "Mise à jour d'étape : {$step->title}";
+                $eventMessage = "Des informations complémentaires ou modifications ont été apportées à l'étape « {$step->title} ».";
+                Mail::to($project->client_email)->send(
+                    new ProjectStepNotificationMail($project, $step, $eventTitle, $eventMessage)
+                );
+            } catch (\Throwable $e) {
+                Log::error("Erreur notification mise à jour étape projet {$project->reference}: " . $e->getMessage());
+            }
+        }
+
+        return redirect()->route('candidat.projets.tracking', $project->id)
+            ->with('success', "L'étape « {$step->title} » a été mise à jour avec succès.");
+    }
+
+    /**
+     * Marquer une étape comme terminée
+     */
+    public function completeProjectStep(Request $request, int $id, int $stepId)
+    {
+        [$candidate, $project] = $this->getAuthorizedCandidateProject($id);
+        $step = $project->steps()->where('id', $stepId)->firstOrFail();
+
+        $step->status = 'termine';
+        $step->completed_at = now();
+        $step->save();
+
+        $step->logActivity('Étape terminée', 'talent', "Étape validée et terminée par le talent");
+
+        // Si le talent choisit de clore toute la mission
+        if ($request->boolean('complete_mission')) {
+            $project->update([
+                'status' => 'terminee',
+                'completed_at' => now(),
+            ]);
+        }
+
+        if ($request->boolean('notify_client', true)) {
+            try {
+                $eventTitle = "Étape validée et terminée : {$step->title}";
+                $eventMessage = "Le talent {$candidate->full_name} a marqué l'étape « {$step->title} » comme finalisée.";
+                Mail::to($project->client_email)->send(
+                    new ProjectStepNotificationMail($project, $step, $eventTitle, $eventMessage)
+                );
+            } catch (\Throwable $e) {
+                Log::error("Erreur notification étape terminée projet {$project->reference}: " . $e->getMessage());
+            }
+        }
+
+        return redirect()->route('candidat.projets.tracking', $project->id)
+            ->with('success', "L'étape « {$step->title} » a été marquée comme terminée.");
+    }
+
+    /**
+     * Demander une action spécifique au client
+     */
+    public function requestClientAction(Request $request, int $id, int $stepId)
+    {
+        [$candidate, $project] = $this->getAuthorizedCandidateProject($id);
+        $step = $project->steps()->where('id', $stepId)->firstOrFail();
+
+        $instructions = $request->input('instructions');
+        if ($instructions) {
+            $step->description = $instructions;
+        }
+        $step->status = 'action_requise_client';
+        $step->save();
+
+        $step->logActivity('Action demandée au client', 'talent', $instructions ?: "Action requise de la part du client");
+
+        try {
+            $eventTitle = "Action requise de votre part : {$step->title}";
+            $eventMessage = "Le talent {$candidate->full_name} est en attente d'un élément ou d'une validation pour l'étape « {$step->title} »." .
+                ($instructions ? "\nConsigne : « {$instructions} »" : "");
+
+            Mail::to($project->client_email)->send(
+                new ProjectStepNotificationMail($project, $step, $eventTitle, $eventMessage)
+            );
+        } catch (\Throwable $e) {
+            Log::error("Erreur notification action demandée projet {$project->reference}: " . $e->getMessage());
+        }
+
+        return redirect()->route('candidat.projets.tracking', $project->id)
+            ->with('success', "Notification d'action requise transmise au client.");
+    }
+
+    /**
+     * Suppression ou annulation d'une étape
+     */
+    public function destroyProjectStep(Request $request, int $id, int $stepId)
+    {
+        [$candidate, $project] = $this->getAuthorizedCandidateProject($id);
+        $step = $project->steps()->where('id', $stepId)->firstOrFail();
+
+        $mode = $request->input('mode', 'delete');
+
+        if ($mode === 'cancel' || $step->status === 'termine') {
+            $step->status = 'annule';
+            $step->save();
+            $step->logActivity('Étape annulée', 'talent', "Étape annulée par le talent");
+
+            return redirect()->route('candidat.projets.tracking', $project->id)
+                ->with('success', "L'étape a été marquée comme annulée (exclue de la progression).");
+        }
+
+        // Suppression physique sécurisée
+        if ($step->deliverable_file_path && Storage::disk('local')->exists($step->deliverable_file_path)) {
+            Storage::disk('local')->delete($step->deliverable_file_path);
+        }
+        if ($step->client_file_path && Storage::disk('local')->exists($step->client_file_path)) {
+            Storage::disk('local')->delete($step->client_file_path);
+        }
+
+        $stepTitle = $step->title;
+        $step->delete();
+
+        return redirect()->route('candidat.projets.tracking', $project->id)
+            ->with('success', "L'étape « {$stepTitle} » a été supprimée.");
+    }
+
+    /**
+     * Réorganisation ordonnée des étapes
+     */
+    public function reorderProjectSteps(Request $request, int $id)
+    {
+        [$candidate, $project] = $this->getAuthorizedCandidateProject($id);
+
+        $positions = $request->input('positions');
+        if (is_array($positions)) {
+            foreach ($positions as $stepId => $pos) {
+                $project->steps()->where('id', (int) $stepId)->update(['position' => (int) $pos]);
+            }
+        }
+
+        if ($request->wantsJson()) {
+            return response()->json(['success' => true]);
+        }
+
+        return redirect()->route('candidat.projets.tracking', $project->id)
+            ->with('success', "L'ordre des étapes a été mis à jour.");
+    }
+
+    /**
+     * Téléchargement sécurisé d'un fichier lié à l'étape pour le talent
+     */
+    public function downloadProjectStepFile(Request $request, int $id, int $stepId, string $type, $fileIndex = null)
+    {
+        [$candidate, $project] = $this->getAuthorizedCandidateProject($id);
+        $step = $project->steps()->where('id', $stepId)->firstOrFail();
+
+        $targetFile = null;
+        if ($type === 'deliverable') {
+            $targetFile = $step->getDeliverableFileAtIndex($fileIndex !== null ? (int) $fileIndex : null);
+        } elseif ($type === 'client') {
+            $targetFile = $step->getClientFileAtIndex($fileIndex !== null ? (int) $fileIndex : null);
+        } else {
+            abort(404, "Type de document invalide.");
+        }
+
+        if (!$targetFile || empty($targetFile['path']) || !Storage::disk('local')->exists($targetFile['path'])) {
+            abort(404, "Le document demandé n'existe pas ou a été déplacé.");
+        }
+
+        return Storage::disk('local')->download($targetFile['path'], $targetFile['name']);
     }
 }
 

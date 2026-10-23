@@ -762,6 +762,19 @@
                     </div>
                     <span>Se connecter</span>
                 </a>
+
+                <!-- 7. Suivi client sans compte -->
+                <a 
+                    href="{{ route('client.demandes.index') }}" 
+                    class="flex items-center gap-3.5 px-4 py-3 rounded-none border border-neutral-200 dark:border-neutral-800 text-neutral-800 dark:text-neutral-200 font-bold text-[15px] hover:bg-neutral-50 dark:hover:bg-neutral-800 transition-all touch-manipulation active:scale-[0.98]"
+                >
+                    <div class="w-8 h-8 rounded-none bg-[#FFF8E1] text-[#B8860B] flex items-center justify-center flex-shrink-0">
+                        <svg class="w-5 h-5 fill-current" viewBox="0 0 24 24">
+                            <path d="M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm-2 10h-4v4h-2v-4H7v-2h4V7h2v4h4v2z"/>
+                        </svg>
+                    </div>
+                    <span>Suivre mes demandes</span>
+                </a>
             </div>
 
             <div class="p-5 border-t border-gray-100 dark:border-neutral-800 bg-gray-50 dark:bg-neutral-900">
@@ -860,6 +873,14 @@
                         </button>
                     </div>
                 </div>
+
+                <!-- Lien Espace Suivi client -->
+                <a 
+                    href="{{ route('client.demandes.index') }}"
+                    class="text-xs font-bold text-neutral-700 dark:text-neutral-300 hover:text-black dark:hover:text-white transition-colors"
+                >
+                    Mes demandes
+                </a>
 
                 <!-- Bouton « Se connecter » bord rectangulaire & tactile -->
                 <a 
@@ -2006,6 +2027,7 @@
                 <div class="flex flex-wrap items-center justify-center gap-6 sm:gap-8 font-medium">
                     <a href="#" class="hover:text-black dark:hover:text-white transition-colors">Mentions légales</a>
                     <a href="#" class="hover:text-black dark:hover:text-white transition-colors">Confidentialité</a>
+                    <a href="{{ route('client.demandes.index') }}" class="hover:text-black dark:hover:text-white transition-colors">Suivi client</a>
                     <a href="{{ route('candidature.create') }}" class="hover:text-black dark:hover:text-white transition-colors">Devenir talent</a>
                     <a href="{{ url('/talents') }}" class="hover:text-black dark:hover:text-white transition-colors">Catalogue</a>
                 </div>

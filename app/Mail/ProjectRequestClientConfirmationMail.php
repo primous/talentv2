@@ -15,10 +15,14 @@ class ProjectRequestClientConfirmationMail extends Mailable
 {
     use Queueable, SerializesModels;
 
+    public ?string $trackingUrl;
+
     public function __construct(
         public ProjectRequest $projectRequest,
-        public ?Candidate $candidate = null
+        public ?Candidate $candidate = null,
+        ?string $trackingUrl = null
     ) {
+        $this->trackingUrl = $trackingUrl ?: route('client.demandes.index');
     }
 
     public function envelope(): Envelope
