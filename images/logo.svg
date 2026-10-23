@@ -1,0 +1,24 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 280 160" width="100%" height="100%" fill="none">
+  <!-- Style definition for webfont fallback -->
+  <style>
+    .tc-text {
+      font-family: 'Montserrat', 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      font-weight: 900;
+      letter-spacing: -0.04em;
+    }
+  </style>
+
+  <!-- Yellow Dot above 'l' -->
+  <circle cx="118" cy="38" r="13" fill="#FFB515" />
+
+  <!-- 8-Point Star above trailing 't' -->
+  <g transform="translate(226, 38)">
+    <polygon points="0,-18 4.2,-6.2 16,-10 8.5,0 16,10 4.2,6.2 0,18 -4.2,6.2 -16,10 -8.5,0 -16,-10 -4.2,-6.2" fill="#FFB515" />
+  </g>
+
+  <!-- "talent" wordmark -->
+  <text x="5" y="86" class="tc-text" font-size="78" fill="#111111">talent</text>
+
+  <!-- "club" wordmark -->
+  <text x="5" y="152" class="tc-text" font-size="78" fill="#111111">club</text>
+</svg>
