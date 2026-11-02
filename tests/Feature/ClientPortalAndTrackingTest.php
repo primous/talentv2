@@ -503,15 +503,15 @@ class ClientPortalAndTrackingTest extends TestCase
 
         $response->assertSessionHas('success');
 
-        // Statut mis à jour dans la base
-        $this->assertEquals('reponse_talent', $req->fresh()->status);
+        // Statut mis à jour dans la base : mission confirmée
+        $this->assertEquals('mission_confirmee', $req->fresh()->status);
 
         // Reflété instantanément dans l'espace client
         $clientView = $this->withSession(['client_portal_email' => 'client.suivi@example.com'])
             ->get(route('client.demandes.show', ['reference' => $req->reference]));
 
         $clientView->assertOk();
-        $clientView->assertSee('Réponse du talent reçue');
+        $clientView->assertSee('Mission confirmée');
         $clientView->assertSee('Ravi d’échanger sur ce projet');
     }
 

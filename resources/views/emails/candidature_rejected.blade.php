@@ -1,72 +1,75 @@
-<!DOCTYPE html>
-<html lang="fr">
-<head>
-    <meta charset="utf-8">
-    <title>Mise à jour de votre candidature — Talent Club</title>
-</head>
-<body style="margin: 0; padding: 0; background-color: #FAF8F2; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; color: #111111; line-height: 1.6;">
-    <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="background-color: #FAF8F2; padding: 40px 15px;">
-        <tr>
-            <td align="center">
-                <table role="presentation" width="100%" style="max-width: 600px; background-color: #ffffff; border-radius: 20px; border: 1px solid #E8E5DC; overflow: hidden; box-shadow: 0 4px 15px rgba(0,0,0,0.04);">
-                    <!-- En-tête -->
-                    <tr>
-                        <td style="background-color: #111111; padding: 28px 32px; text-align: left;">
-                            <span style="font-size: 26px; font-weight: 900; color: #ffffff; letter-spacing: -0.05em;">talent</span><span style="font-size: 26px; font-weight: 900; color: #FFB515; letter-spacing: -0.05em;">★</span><span style="font-size: 26px; font-weight: 900; color: #ffffff; letter-spacing: -0.05em;">club</span>
-                            <div style="color: #FFB515; font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.1em; margin-top: 4px;">Notification de la Commission</div>
-                        </td>
-                    </tr>
+@extends('emails.layout')
 
-                    <!-- Corps de l'e-mail -->
-                    <tr>
-                        <td style="padding: 36px 32px;">
-                            <h1 style="font-size: 20px; font-weight: 800; color: #111111; margin-top: 0; margin-bottom: 20px;">Décision concernant votre dossier de candidature</h1>
+@section('title', 'Mise à jour de votre candidature — Talent Club')
 
-                            <p style="font-size: 14px; color: #333333; margin-bottom: 16px;">
-                                Bonjour <strong>{{ $candidate->full_name }}</strong>,
-                            </p>
+@section('content')
+<!-- Petit trait séparateur jaune 40px x 4px -->
+<table role="presentation" cellspacing="0" cellpadding="0" border="0" style="margin: 0 0 20px 0;">
+    <tr>
+        <td style="width: 40px; height: 4px; background-color: #FFD60A; border-radius: 2px; line-height: 4px; font-size: 1px;">&nbsp;</td>
+    </tr>
+</table>
 
-                            <p style="font-size: 14px; color: #333333; margin-bottom: 20px;">
-                                Nous vous remercions chaleureusement pour l'intérêt que vous avez manifesté envers Talent Club et pour le soin apporté à la présentation de votre dossier (Réf : <strong>{{ $candidate->tracking_code }}</strong>) au titre de <strong>{{ $candidate->job_title }}</strong>.
-                            </p>
+<!-- Titre principal 20px bold blanc -->
+<h1 style="font-size: 20px; line-height: 1.4; font-weight: 700; color: #FFFFFF; margin: 0 0 20px 0;">
+    Décision concernant votre dossier de candidature
+</h1>
 
-                            <div style="background-color: #F8F9FA; border-left: 4px solid #6C757D; padding: 18px 20px; border-radius: 8px; margin-bottom: 24px;">
-                                <p style="font-size: 13px; color: #495057; margin: 0 0 10px 0;">
-                                    Après étude rigoureuse par notre comité d'évaluation, nous avons le regret de vous informer que votre profil ne peut pas être retenu dans la sélection actuelle des talents certifiés.
-                                </p>
-                                @if(!empty($candidate->decision_motif))
-                                    <div style="font-size: 12px; color: #212529; background-color: #ffffff; padding: 12px; border-radius: 6px; border: 1px solid #DEE2E6; margin-top: 10px;">
-                                        <strong>Motif notifié par la commission :</strong><br>
-                                        <span style="font-style: italic;">« {{ $candidate->decision_motif }} »</span>
-                                    </div>
-                                @endif
-                            </div>
+<!-- Paragraphes espacés 20px, texte blanc 16px line-height 1.7 -->
+<p style="font-size: 16px; line-height: 1.7; color: #FFFFFF; margin: 0 0 20px 0;">
+    Bonjour <strong style="color: #FFFFFF;">{{ $candidate->full_name }}</strong>,
+</p>
 
-                            <p style="font-size: 13px; color: #555555; margin-bottom: 20px;">
-                                Cette décision ne remet nullement en question la qualité générale de vos compétences. Nos critères de sélection tiennent compte des exigences contractuelles spécifiques de nos donneurs d'ordres et de quotas rigoureux par domaine de spécialité.
-                            </p>
+<p style="font-size: 16px; line-height: 1.7; color: #FFFFFF; margin: 0 0 20px 0;">
+    Nous vous remercions chaleureusement pour l'intérêt que vous avez manifesté envers Talent Club et pour le soin apporté à votre dossier (Réf : <strong style="color: #FFFFFF;">{{ $candidate->tracking_code }}</strong>) au titre de <strong style="color: #FFFFFF;">{{ $candidate->job_title }}</strong>.
+</p>
 
-                            <p style="font-size: 13px; color: #555555; margin-bottom: 28px;">
-                                Vous aurez la possibilité de soumettre une nouvelle candidature dès que votre portfolio ou vos références se seront enrichis.
-                            </p>
+<p style="font-size: 16px; line-height: 1.7; color: #A0A0A0; margin: 0 0 20px 0;">
+    Après examen minutieux de l'ensemble des éléments transmis, notre commission d'évaluation n'a pas retenu votre profil dans la sélection actuelle des talents certifiés.
+</p>
 
-                            <p style="font-size: 13px; color: #333333; margin: 0;">
-                                En vous souhaitant une excellente réussite dans vos projets professionnels,<br>
-                                <strong>La Direction & Commission de Sélection Talent Club</strong>
-                            </p>
-                        </td>
-                    </tr>
+@if(!empty($candidate->decision_motif))
+<!-- Carte motif notifié gris foncé #1E1E1E border #2A2A2A -->
+<table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0" style="background-color: #1E1E1E; border: 1px solid #2A2A2A; border-radius: 8px; margin: 0 0 24px 0;">
+    <tr>
+        <td style="padding: 18px 20px;">
+            <div style="font-size: 11px; text-transform: uppercase; font-weight: 700; color: #A0A0A0; letter-spacing: 0.08em; margin-bottom: 6px;">
+                Motif notifié par la commission
+            </div>
+            <div style="font-size: 14px; line-height: 1.6; color: #FFFFFF; font-style: italic;">
+                « {{ $candidate->decision_motif }} »
+            </div>
+        </td>
+    </tr>
+</table>
+@endif
 
-                    <!-- Pied de page -->
-                    <tr>
-                        <td style="background-color: #FAF8F2; padding: 20px 32px; border-top: 1px solid #E8E5DC; text-align: center; font-size: 11px; color: #888888;">
-                            © 2026 Talent Club — Tous droits réservés.<br>
-                            E-mail officiel envoyé à {{ $candidate->email }}.
-                        </td>
-                    </tr>
-                </table>
-            </td>
-        </tr>
-    </table>
-</body>
-</html>
+<p style="font-size: 14px; line-height: 1.6; color: #A0A0A0; margin: 0 0 20px 0;">
+    Cette décision ne remet nullement en cause la qualité générale de votre travail. Nos critères d'admission tiennent compte d'exigences contractuelles précises et de quotas stricts par domaine de spécialité.
+</p>
+
+<!-- 1 seul bloc couleur : carte jaune clair #FFEB3B avec texte noir + bouton noir #000000 -->
+<table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0" style="background-color: #FFEB3B; border-radius: 12px; margin: 24px 0 28px 0;">
+    <tr>
+        <td style="padding: 24px 20px; text-align: center;">
+            <p style="font-size: 15px; line-height: 1.6; font-weight: 700; color: #000000; margin: 0 0 18px 0;">
+                Vous aurez la possibilité de soumettre une nouvelle candidature dès que votre portfolio ou vos références se seront enrichis.
+            </p>
+            <table role="presentation" cellspacing="0" cellpadding="0" border="0" align="center" style="margin: 0 auto;">
+                <tr>
+                    <td align="center" style="border-radius: 8px; background-color: #000000;">
+                        <a href="{{ url('/') }}" class="mobile-btn" style="display: inline-block; background-color: #000000; color: #FFFFFF; font-size: 15px; font-weight: 800; text-decoration: none; padding: 0 28px; border-radius: 8px; border: 1px solid #000000; height: 48px; line-height: 48px; box-sizing: border-box;">
+                            Visiter Talent Club
+                        </a>
+                    </td>
+                </tr>
+            </table>
+        </td>
+    </tr>
+</table>
+
+<p style="font-size: 14px; line-height: 1.7; color: #A0A0A0; margin: 0;">
+    En vous souhaitant un plein épanouissement dans vos projets professionnels,<br>
+    <strong style="color: #FFFFFF;">La Direction & Commission de Sélection Talent Club</strong>
+</p>
+@endsection

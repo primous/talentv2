@@ -4,7 +4,10 @@
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>Administration Générale — Talent Club</title>
-    <link rel="icon" type="image/svg+xml" href="{{ asset('images/logo.svg') ?? '/images/logo.svg' }}">
+    <!-- Favicon -->
+    <link rel="icon" type="image/x-icon" href="{{ asset('favicon.ico') }}">
+    <link rel="icon" type="image/png" sizes="32x32" href="{{ asset('images/favicon.png') }}">
+    <link rel="apple-touch-icon" sizes="180x180" href="{{ asset('images/apple-touch-icon.png') }}">
 
     <!-- Google Fonts: Inter (Headings) & Montserrat (Body) & Sora (Numbers) -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -104,7 +107,7 @@
                     <!-- LOGO OFFICIEL TALENT CLUB & PHOTO DE PROFIL ADMIN -->
                     <div class="flex items-center justify-between gap-3 pb-4 border-b border-neutral-100">
                         <a href="{{ route('admin.dashboard') }}" class="flex items-center group transition-transform hover:opacity-90" aria-label="Talent Club Admin">
-                            <img src="{{ asset('images/logo.svg') }}" alt="Talent Club" class="h-10 w-auto object-contain">
+                            <img src="{{ asset('images/logo.png') }}" alt="Talent Club" class="h-10 w-auto object-contain">
                         </a>
 
                         <!-- Uniquement la photo de profil à côté du logo -->

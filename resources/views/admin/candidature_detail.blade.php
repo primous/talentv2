@@ -4,7 +4,10 @@
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>Examen Dossier : {{ $candidate->full_name }} ({{ $candidate->tracking_code }}) — Talent Club</title>
-    <link rel="icon" type="image/svg+xml" href="{{ asset('images/logo.svg') ?? '/images/logo.svg' }}">
+    <!-- Favicon -->
+    <link rel="icon" type="image/x-icon" href="{{ asset('favicon.ico') }}">
+    <link rel="icon" type="image/png" sizes="32x32" href="{{ asset('images/favicon.png') }}">
+    <link rel="apple-touch-icon" sizes="180x180" href="{{ asset('images/apple-touch-icon.png') }}">
 
     <!-- Google Fonts: Inter & Montserrat & Sora -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -55,15 +58,9 @@
     <header class="sticky top-0 z-50 bg-[#111111] text-white border-b border-neutral-800">
         <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-20 flex items-center justify-between">
             <div class="flex items-center gap-4">
-                <a href="{{ route('admin.dashboard') }}" class="flex items-center gap-2 group">
-                    <div class="flex items-center">
-                        <div class="relative flex items-center">
-                            <span class="tc-logo-text text-[26px] md:text-[28px] text-white">talent</span>
-                            <span class="absolute top-[2px] left-[40px] md:left-[43px] w-2.5 h-2.5 rounded-full bg-[#FFB515]"></span>
-                            <span class="absolute -top-[5px] right-[0px] text-[#FFB515] text-[16px] md:text-[17px] font-bold">★</span>
-                        </div>
-                        <span class="tc-logo-text text-[26px] md:text-[28px] text-white -mt-1 md:-mt-1.5">club</span>
-                    </div>
+                <a href="{{ route('admin.dashboard') }}" class="flex items-center gap-2 group hover:opacity-90 transition-opacity" aria-label="Talent Club Admin">
+                    <img src="{{ asset('images/logo-white.png') }}" alt="Talent Club" class="h-8 md:h-9 w-auto object-contain">
+                    <span class="sr-only">talent club</span>
                 </a>
                 <span class="px-2.5 py-0.5 bg-[#FFB515] text-black text-[10px] font-black uppercase tracking-wider">
                     Fiche d'Examen & Scoring

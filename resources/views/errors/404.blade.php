@@ -4,7 +4,10 @@
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>Page introuvable (404) — Talent Club</title>
-    <link rel="icon" type="image/svg+xml" href="{{ asset('images/logo.svg') ?? '/images/logo.svg' }}">
+    <!-- Favicon -->
+    <link rel="icon" type="image/x-icon" href="{{ asset('favicon.ico') }}">
+    <link rel="icon" type="image/png" sizes="32x32" href="{{ asset('images/favicon.png') }}">
+    <link rel="apple-touch-icon" sizes="180x180" href="{{ asset('images/apple-touch-icon.png') }}">
 
     <!-- Google Fonts: Inter & Montserrat -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -45,10 +48,9 @@
     <!-- En-tête simplifié -->
     <header class="bg-white border-b border-[#E8E5DC] py-4 px-4 sm:px-8">
         <div class="max-w-7xl mx-auto flex items-center justify-between">
-            <a href="{{ route('home') }}" class="flex items-center gap-1.5 text-2xl font-black text-black">
-                <span class="tc-logo-text tracking-tight">talent</span>
-                <span class="text-[#FFB515]">★</span>
-                <span class="tc-logo-text tracking-tight">club</span>
+            <a href="{{ route('home') }}" class="flex items-center gap-1.5 hover:opacity-90 transition-opacity" aria-label="Talent Club Accueil">
+                <img src="{{ asset('images/logo.png') }}" alt="Talent Club" class="h-9 w-auto object-contain">
+                <span class="sr-only">talent club</span>
             </a>
 
             <div class="flex items-center gap-3 text-xs font-bold">

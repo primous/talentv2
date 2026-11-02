@@ -198,7 +198,8 @@ class ProjectEmailsAndQualificationFormTest extends TestCase
 
         $response->assertRedirect();
         $project->refresh();
-        $this->assertEquals('reponse_talent', $project->status);
+        $this->assertEquals('mission_confirmee', $project->status);
+        $this->assertNotNull($project->mission_confirmed_at);
         $this->assertNotNull($project->client_decision_notified_at);
 
         Mail::assertSent(ProjectRequestAcceptedClientMail::class, function ($mail) use ($candidate) {

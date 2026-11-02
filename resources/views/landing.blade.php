@@ -12,7 +12,9 @@
     <meta property="og:type" content="website">
 
     <!-- Favicon -->
-    <link rel="icon" type="image/svg+xml" href="{{ asset('images/logo.svg') ?? '/images/logo.svg' }}">
+    <link rel="icon" type="image/x-icon" href="{{ asset('favicon.ico') }}">
+    <link rel="icon" type="image/png" sizes="32x32" href="{{ asset('images/favicon.png') }}">
+    <link rel="apple-touch-icon" sizes="180x180" href="{{ asset('images/apple-touch-icon.png') }}">
 
     <!-- Google Fonts: Inter (Headings) & Montserrat (Body) & Sora -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -455,15 +457,9 @@
         >
             <!-- En-tête du tiroir -->
             <div class="p-6 border-b border-gray-100 dark:border-neutral-800 flex items-center justify-between">
-                <a href="{{ url('/') }}" @click="mobileMenu = false" class="flex items-center gap-2">
-                    <div class="flex flex-col leading-none">
-                        <div class="relative flex items-center">
-                            <span class="tc-logo-text text-[26px] text-black dark:text-white">talent</span>
-                            <span class="absolute top-[3px] left-[38px] w-2 h-2 rounded-full bg-[#FFB515]"></span>
-                            <span class="absolute -top-[4px] right-[0px] text-[#FFB515] text-[15px] font-bold">★</span>
-                        </div>
-                        <span class="tc-logo-text text-[26px] text-black dark:text-white -mt-1">club</span>
-                    </div>
+                <a href="{{ url('/') }}" @click="mobileMenu = false" class="flex items-center gap-2 hover:opacity-90 transition-opacity" aria-label="Talent Club Accueil">
+                    <img src="{{ asset('images/logo.png') }}" alt="Talent Club" class="h-9 w-auto object-contain">
+                    <span class="sr-only">talent club</span>
                 </a>
                 <button 
                     @click="mobileMenu = false" 
@@ -625,15 +621,9 @@
         <div class="max-w-[1400px] mx-auto px-4 sm:px-6 lg:px-10 h-20 flex items-center justify-between">
             
             <!-- Logo Talent Club à gauche -->
-            <a href="{{ url('/') }}" class="flex items-center gap-2 group flex-shrink-0" aria-label="Talent Club Accueil">
-                <div class="flex flex-col leading-none">
-                    <div class="relative flex items-center">
-                        <span class="tc-logo-text text-[28px] md:text-[31px] text-black dark:text-white">talent</span>
-                        <span class="absolute top-[3px] left-[43px] md:left-[47px] w-2.5 h-2.5 rounded-full bg-[#FFB515] group-hover:scale-125 transition-transform"></span>
-                        <span class="absolute -top-[5px] right-[0px] text-[#FFB515] text-[17px] md:text-[18px] font-bold group-hover:rotate-45 transition-transform duration-300">★</span>
-                    </div>
-                    <span class="tc-logo-text text-[28px] md:text-[31px] text-black dark:text-white -mt-1 md:-mt-1.5">club</span>
-                </div>
+            <a href="{{ url('/') }}" class="flex items-center gap-2 group flex-shrink-0 hover:opacity-90 transition-opacity" aria-label="Talent Club Accueil">
+                <img src="{{ asset('images/logo.png') }}" alt="Talent Club" class="h-10 md:h-11 w-auto object-contain">
+                <span class="sr-only">talent club</span>
             </a>
 
             <!-- Liens principaux au centre (Format Ordinateur inspiré de Wayi) -->
@@ -1350,269 +1340,701 @@
                     </div>
                 </div>
 
+                @php
+                    $getReviewStats = function($compId, $defaultBadge = 'Compétence certifiée') {
+                        $comp = null;
+                        try {
+                            if (\Illuminate\Support\Facades\Schema::hasTable('talent_competencies')) {
+                                $comp = \App\Models\TalentCompetency::with('publishedReviews')->find($compId);
+                            }
+                        } catch (\Throwable $e) {
+                            $comp = null;
+                        }
+                        $count = $comp ? $comp->publishedReviews->count() : 0;
+                        $avg = $count > 0 ? $comp->getAverageRating() : null;
+                        $isCert = $comp ? $comp->isCertified() : true;
+                        
+                        if ($count >= 3 && $avg !== null && $avg >= 4.5) {
+                            $badge = 'Recommandé';
+                            $badgeColor = 'bg-[#FFF9EC] dark:bg-[#261D08] text-[#B8860B] dark:text-[#FFB515] border-[#FFE7A3] dark:border-[#59430D]';
+                        } elseif ($isCert) {
+                            $badge = $defaultBadge ?: 'Compétence certifiée';
+                            $badgeColor = 'bg-emerald-50 dark:bg-emerald-950/40 text-emerald-800 dark:text-emerald-300 border-emerald-300 dark:border-emerald-800';
+                        } else {
+                            $badge = 'Compétence déclarée';
+                            $badgeColor = 'bg-neutral-100 dark:bg-neutral-800 text-neutral-700 dark:text-neutral-300 border-neutral-300 dark:border-neutral-700';
+                        }
+                        
+                        return [
+                            'count' => $count,
+                            'rating' => $avg !== null ? number_format($avg, 1, '.', '') : null,
+                            'has_reviews' => $count > 0,
+                            'badge' => $badge,
+                            'badge_color' => $badgeColor,
+                        ];
+                    };
+
+                    $statsSite = $getReviewStats(1, 'Compétence certifiée');
+                    $statsLogo = $getReviewStats(8, 'Compétence certifiée');
+                    $statsVideo = $getReviewStats(11, 'Compétence certifiée');
+                    $statsUiUx = $getReviewStats(9, 'Compétence certifiée');
+                    $statsCopy = $getReviewStats(14, 'Compétence certifiée');
+                    $statsApp = $getReviewStats(3, 'Compétence certifiée');
+                @endphp
+
                 <!-- Grille de cartes de prestations (Inspirée du design screenshot, 100% rectangulaire) -->
                 <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 sm:gap-8 items-stretch">
                     
-                    <!-- Carte 1 : Logo & Identité Visuelle Complète (Design & Branding) -->
-                    <div 
-                        x-show="activeCategory === 'all' || activeCategory === 'design'"
-                        x-transition
-                        class="rounded-none bg-white dark:bg-[#141414] border border-[#E5E5E0] dark:border-neutral-800 hover:border-black dark:hover:border-neutral-600 transition-all duration-200 flex flex-col justify-between overflow-hidden shadow-sm hover:shadow-md group"
-                    >
-                        <!-- Image couverture 16:10 avec badges superposés -->
-                        <div class="relative aspect-[16/10] overflow-hidden bg-neutral-100 dark:bg-neutral-800">
-                            <img 
-                                src="{{ asset('images/service-design-branding.jpg') ?? '/images/service-design-branding.jpg' }}" 
-                                alt="Création de Logo & Identité Visuelle Complète" 
-                                class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
-                            />
-                            
-                            <!-- Badges supérieurs gauche -->
-                            <div class="absolute top-3.5 left-3.5 flex items-center gap-2">
-                                <span class="inline-flex items-center gap-1.5 px-3 py-1 rounded-none bg-black/85 backdrop-blur-md text-white text-[11px] font-bold shadow-xs border border-white/10">
-                                    <span class="w-2 h-2 rounded-none bg-emerald-400"></span>
-                                    <span>Certifié</span>
-                                </span>
-                                <span class="inline-flex items-center px-3 py-1 rounded-none bg-white/95 dark:bg-neutral-900/90 backdrop-blur-md text-black dark:text-white text-[11px] font-bold shadow-xs border border-black/10 dark:border-white/10">
-                                    Design & Branding
-                                </span>
-                            </div>
-
-                            <!-- Badge inférieur gauche : Délai de livraison (Icône calendrier solide imposante - Rangée 1 Col 3) -->
-                            <div class="absolute bottom-3 left-3.5">
-                                <span class="inline-flex items-center gap-1.5 px-3 py-1 rounded-none bg-black/90 backdrop-blur-md text-white text-[11px] font-bold shadow-xs border border-white/10">
-                                    <svg class="w-3.5 h-3.5 fill-current text-[#FFB515]" viewBox="0 0 24 24">
-                                        <path d="M19 4h-1V2h-2v2H8V2H6v2H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V6c0-1.1-.9-2-2-2zm0 16H5V9h14v11zM7 11h2v2H7v-2zm4 0h2v2h-2v-2zm4 0h2v2h-2v-2z"/>
-                                    </svg>
-                                    <span>4 à 7 jours</span>
-                                </span>
-                            </div>
-                        </div>
-
-                        <!-- Corps du produit -->
-                        <div class="p-6 flex flex-col flex-1 justify-between text-left space-y-4">
-                            <div>
-                                <h3 class="text-lg font-extrabold text-black dark:text-white leading-snug group-hover:text-[#FFB515] transition-colors line-clamp-2">
-                                    Création de Logo & Identité Visuelle Complète
-                                </h3>
-
-                                <div class="text-xs text-neutral-600 dark:text-neutral-400 mt-2 flex items-center gap-1.5 font-medium">
-                                    <span>Par <strong class="text-black dark:text-white font-bold">Kévin A.</strong></span>
-                                    <span>·</span>
-                                    <span class="font-bold text-[#B8860B] dark:text-[#FFB515]">Talent Club Pro</span>
-                                </div>
-
-                                <p class="text-xs text-neutral-600 dark:text-neutral-400 leading-relaxed mt-3 line-clamp-2">
-                                    3 propositions uniques, charte chromatique, typographies et fichiers vectoriels HD (PNG, SVG, AI).
-                                </p>
-                            </div>
-
-                            <!-- Badges statut & Avis clients -->
-                            <div class="flex items-center gap-3 pt-1">
-                                <span class="px-2.5 py-0.5 rounded-none text-[11px] font-extrabold bg-[#FFF9EC] dark:bg-[#261D08] text-[#B8860B] dark:text-[#FFB515] border border-[#FFE7A3] dark:border-[#59430D]">
-                                    Meilleure vente
-                                </span>
-                                <span class="text-xs font-bold text-neutral-700 dark:text-neutral-300 flex items-center gap-1">
-                                    <span class="text-[#FFB515]">★</span> 4.9 <span class="font-normal text-neutral-500 dark:text-neutral-400">(38 avis)</span>
-                                </span>
-                            </div>
-
-                            <!-- Footer Prix & Bouton Commander -->
-                            <div class="pt-4 border-t border-neutral-100 dark:border-neutral-800 flex items-center justify-between mt-auto">
-                                <div>
-                                    <div class="text-xl sm:text-2xl font-black text-black dark:text-white leading-none">
-                                        25 000 <span class="text-sm font-extrabold">FCFA</span>
-                                    </div>
-                                    <div class="text-[11px] text-neutral-400 line-through font-semibold mt-0.5">
-                                        45 000 FCFA
-                                    </div>
-                                </div>
-
-                                <a 
-                                    href="{{ url('/projet/logo-identite') }}"
-                                    class="h-10 px-5 rounded-none bg-black hover:bg-neutral-800 active:bg-neutral-900 text-white dark:bg-[#FFB515] dark:text-black dark:hover:bg-[#E5A20C] font-bold text-xs inline-flex items-center gap-2 transition-all shadow-sm touch-manipulation active:scale-95 group"
-                                >
-                                    <span>Commander</span>
-                                    <svg class="w-3.5 h-3.5 fill-current transition-transform duration-150 group-hover:translate-x-1" viewBox="0 0 24 24">
-                                        <path d="M12 4l-1.41 1.41L16.17 11H4v2h12.17l-5.58 5.59L12 20l8-8z"/>
-                                    </svg>
-                                </a>
-                            </div>
-                        </div>
-                    </div>
-
-                    <!-- Carte 2 : Site Vitrine Professionnel Moderne (Développement Web) -->
+                    <!-- Carte 1 : Site Vitrine Professionnel Moderne & Responsive (Développement Web) -->
                     <div 
                         x-show="activeCategory === 'all' || activeCategory === 'dev'"
                         x-transition
-                        class="rounded-none bg-white dark:bg-[#141414] border border-[#E5E5E0] dark:border-neutral-800 hover:border-black dark:hover:border-neutral-600 transition-all duration-200 flex flex-col justify-between overflow-hidden shadow-sm hover:shadow-md group"
+                        class="rounded-none bg-white dark:bg-[#141414] border border-[#E5E5E0] dark:border-neutral-800 hover:border-black dark:hover:border-[#FFB515] transition-all duration-200 flex flex-col justify-between overflow-hidden shadow-xs hover:shadow-md group text-left relative"
                     >
-                        <!-- Image couverture 16:10 avec badges superposés -->
-                        <div class="relative aspect-[16/10] overflow-hidden bg-neutral-100 dark:bg-neutral-800">
+                        <!-- Miniature 16:10 avec badges superposés -->
+                        <a 
+                            href="{{ url('/projet/site-vitrine') }}" 
+                            class="block relative aspect-[16/10] overflow-hidden bg-neutral-100 dark:bg-neutral-800 group"
+                            aria-label="Site Vitrine Professionnel Moderne & Responsive"
+                        >
                             <img 
                                 src="{{ asset('images/service-web-development.jpg') ?? '/images/service-web-development.jpg' }}" 
                                 alt="Site Vitrine Professionnel Moderne & Responsive" 
                                 class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
+                                loading="lazy"
                             />
                             
-                            <!-- Badges supérieurs gauche -->
-                            <div class="absolute top-3.5 left-3.5 flex items-center gap-2">
-                                <span class="inline-flex items-center gap-1.5 px-3 py-1 rounded-none bg-black/85 backdrop-blur-md text-white text-[11px] font-bold shadow-xs border border-white/10">
-                                    <span class="w-2 h-2 rounded-none bg-emerald-400"></span>
-                                    <span>Certifié</span>
-                                </span>
-                                <span class="inline-flex items-center px-3 py-1 rounded-none bg-white/95 dark:bg-neutral-900/90 backdrop-blur-md text-black dark:text-white text-[11px] font-bold shadow-xs border border-black/10 dark:border-white/10">
-                                    Développement Web
+                            <!-- Badge Catégorie en haut à gauche -->
+                            <div class="absolute top-3 left-3 flex items-center gap-1.5">
+                                <span class="inline-flex items-center px-2.5 py-0.5 rounded-none bg-black/90 text-white text-[10px] font-bold tracking-wide shadow-xs border border-white/10" x-text="currentLang === 'fr' ? 'Développement web et informatique' : 'Web & IT Development'">
+                                    Développement web et informatique
                                 </span>
                             </div>
 
-                            <!-- Badge inférieur gauche : Délai de livraison (Icône calendrier solide imposante - Rangée 1 Col 3) -->
-                            <div class="absolute bottom-3 left-3.5">
-                                <span class="inline-flex items-center gap-1.5 px-3 py-1 rounded-none bg-black/90 backdrop-blur-md text-white text-[11px] font-bold shadow-xs border border-white/10">
-                                    <svg class="w-3.5 h-3.5 fill-current text-[#FFB515]" viewBox="0 0 24 24">
+                            <!-- Badge Express en haut à droite -->
+                            <div class="absolute top-3 right-3">
+                                <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-none bg-[#FFB515] text-black text-[10px] font-black uppercase tracking-wider shadow-xs">
+                                    <span>⚡ EXPRESS</span>
+                                </span>
+                            </div>
+
+                            <!-- Badge Délai indicatif en bas à gauche -->
+                            <div class="absolute bottom-2.5 left-3">
+                                <span class="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-none bg-black/90 backdrop-blur-md text-white text-[10px] font-bold shadow-xs border border-white/10">
+                                    <svg class="w-3 h-3 fill-current text-[#FFB515]" viewBox="0 0 24 24">
                                         <path d="M19 4h-1V2h-2v2H8V2H6v2H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V6c0-1.1-.9-2-2-2zm0 16H5V9h14v11zM7 11h2v2H7v-2zm4 0h2v2h-2v-2zm4 0h2v2h-2v-2z"/>
                                     </svg>
-                                    <span>10 à 15 jours</span>
+                                    <span x-text="currentLang === 'fr' ? '10 à 15 jours ouvrés' : '10 to 15 business days'">10 à 15 jours ouvrés</span>
                                 </span>
                             </div>
-                        </div>
+                        </a>
 
-                        <!-- Corps du produit -->
-                        <div class="p-6 flex flex-col flex-1 justify-between text-left space-y-4">
-                            <div>
-                                <h3 class="text-lg font-extrabold text-black dark:text-white leading-snug group-hover:text-[#FFB515] transition-colors line-clamp-2">
-                                    Site Vitrine Professionnel Moderne & Responsive
+                        <!-- Corps de la carte -->
+                        <div class="p-5 flex flex-col flex-1 justify-between space-y-3">
+                            <div class="space-y-2.5">
+                                <!-- Titre de la prestation -->
+                                <h3 class="text-[16px] font-extrabold text-black dark:text-white leading-snug group-hover:text-[#B8860B] dark:group-hover:text-[#FFB515] transition-colors line-clamp-2">
+                                    <a href="{{ url('/projet/site-vitrine') }}" class="hover:underline focus:outline-none">
+                                        Site Vitrine Professionnel Moderne & Responsive
+                                    </a>
                                 </h3>
 
-                                <div class="text-xs text-neutral-600 dark:text-neutral-400 mt-2 flex items-center gap-1.5 font-medium">
-                                    <span>Par <strong class="text-black dark:text-white font-bold">Amina S.</strong></span>
-                                    <span>·</span>
-                                    <span class="font-bold text-[#B8860B] dark:text-[#FFB515]">Talent Club Pro</span>
+                                <!-- Profil du Talent (Photo + Nom + Checkmark + Titre/Rôle) -->
+                                <div class="flex items-center gap-2.5 pt-0.5">
+                                    <img 
+                                        src="https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?auto=format&fit=crop&w=200&q=80" 
+                                        alt="Amina S." 
+                                        class="w-7 h-7 rounded-none object-cover border border-neutral-300 dark:border-neutral-700 flex-shrink-0"
+                                    />
+                                    <div class="min-w-0 flex flex-col justify-center">
+                                        <div class="flex items-center gap-1.5">
+                                            <span class="text-xs font-bold text-neutral-800 dark:text-neutral-200 truncate">Studio Amina Design</span>
+                                            <span class="w-3.5 h-3.5 rounded-none bg-[#FFB515] text-black text-[9px] font-black inline-flex items-center justify-center flex-shrink-0" title="Compétence vérifiée">✓</span>
+                                        </div>
+                                        <span class="text-[11px] text-neutral-500 dark:text-neutral-400 truncate">Lead UI/UX Designer & Directrice Artistique</span>
+                                    </div>
                                 </div>
 
-                                <p class="text-xs text-neutral-600 dark:text-neutral-400 leading-relaxed mt-3 line-clamp-2">
+                                <!-- Description courte (2 lignes) -->
+                                <p 
+                                    class="text-xs text-neutral-600 dark:text-neutral-400 leading-relaxed font-normal"
+                                    style="display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden;"
+                                >
                                     Architecture moderne sur-mesure, formulaire de contact interactif, SEO local et mobile-first garanti.
                                 </p>
                             </div>
 
-                            <!-- Badges statut & Avis clients -->
-                            <div class="flex items-center gap-3 pt-1">
-                                <span class="px-2.5 py-0.5 rounded-none text-[11px] font-extrabold bg-[#FFF9EC] dark:bg-[#261D08] text-[#B8860B] dark:text-[#FFB515] border border-[#FFE7A3] dark:border-[#59430D]">
-                                    Recommandé
+                            <!-- Badge Statut & Avis clients fonctionnel (ZÉRO FICTIF) -->
+                            <div class="flex items-center gap-2.5 pt-2 border-t border-neutral-100 dark:border-neutral-800/80">
+                                <span class="px-2 py-0.5 rounded-none text-[10px] font-extrabold border {{ $statsSite['badge_color'] }}">
+                                    <span x-show="currentLang === 'fr'">{{ $statsSite['badge'] }}</span>
+                                    <span x-show="currentLang === 'en'">{{ $statsSite['badge'] === 'Recommandé' ? 'Recommended' : ($statsSite['badge'] === 'Compétence certifiée' ? 'Certified Skill' : 'Declared Skill') }}</span>
                                 </span>
-                                <span class="text-xs font-bold text-neutral-700 dark:text-neutral-300 flex items-center gap-1">
-                                    <span class="text-[#FFB515]">★</span> 5.0 <span class="font-normal text-neutral-500 dark:text-neutral-400">(46 avis)</span>
-                                </span>
-                            </div>
-
-                            <!-- Footer Prix & Bouton Commander -->
-                            <div class="pt-4 border-t border-neutral-100 dark:border-neutral-800 flex items-center justify-between mt-auto">
-                                <div>
-                                    <div class="text-xl sm:text-2xl font-black text-black dark:text-white leading-none">
-                                        120 000 <span class="text-sm font-extrabold">FCFA</span>
-                                    </div>
-                                    <div class="text-[11px] text-neutral-400 line-through font-semibold mt-0.5">
-                                        180 000 FCFA
-                                    </div>
-                                </div>
-
-                                <a 
-                                    href="{{ url('/projet/site-vitrine') }}"
-                                    class="h-10 px-5 rounded-none bg-black hover:bg-neutral-800 active:bg-neutral-900 text-white dark:bg-[#FFB515] dark:text-black dark:hover:bg-[#E5A20C] font-bold text-xs inline-flex items-center gap-2 transition-all shadow-sm touch-manipulation active:scale-95 group"
-                                >
-                                    <span>Commander</span>
-                                    <svg class="w-3.5 h-3.5 fill-current transition-transform duration-150 group-hover:translate-x-1" viewBox="0 0 24 24">
-                                        <path d="M12 4l-1.41 1.41L16.17 11H4v2h12.17l-5.58 5.59L12 20l8-8z"/>
-                                    </svg>
-                                </a>
+                                @if($statsSite['has_reviews'])
+                                    <a 
+                                        href="{{ url('/projet/site-vitrine') }}#avis-clients" 
+                                        class="text-xs font-bold text-neutral-700 dark:text-neutral-300 flex items-center gap-1 hover:text-[#B8860B] dark:hover:text-[#FFB515] transition-colors group/reviews"
+                                        :title="currentLang === 'fr' ? 'Consulter les {{ $statsSite['count'] }} avis clients vérifiés' : 'View {{ $statsSite['count'] }} verified customer reviews'"
+                                    >
+                                        <span class="text-[#FFB515]">★</span>
+                                        <span>{{ $statsSite['rating'] }}</span>
+                                        <span class="font-normal text-neutral-500 dark:text-neutral-400 group-hover/reviews:underline" x-text="'(' + {{ $statsSite['count'] }} + (currentLang === 'fr' ? ' avis)' : ' reviews)'))"></span>
+                                    </a>
+                                @else
+                                    <a 
+                                        href="{{ url('/projet/site-vitrine') }}#avis-clients" 
+                                        class="text-xs font-normal text-neutral-500 dark:text-neutral-400 flex items-center gap-1 hover:text-[#B8860B] dark:hover:text-[#FFB515] transition-colors group/reviews"
+                                        :title="currentLang === 'fr' ? 'Aucun avis pour le moment. Soyez le premier à partager votre expérience.' : 'No reviews yet. Be the first to share your experience.'"
+                                    >
+                                        <span class="text-neutral-300 dark:text-neutral-600">★</span>
+                                        <span class="group-hover/reviews:underline" x-text="currentLang === 'fr' ? 'Aucun avis pour le moment' : 'No reviews yet'"></span>
+                                    </a>
+                                @endif
                             </div>
                         </div>
                     </div>
 
-                    <!-- Carte 3 : Pack 5 Vidéos Courtes Virales (Vidéo & Média) -->
+                    <!-- Carte 2 : Création de Logo & Identité Visuelle Complète (Design Graphique & UI) -->
+                    <div 
+                        x-show="activeCategory === 'all' || activeCategory === 'design'"
+                        x-transition
+                        class="rounded-none bg-white dark:bg-[#141414] border border-[#E5E5E0] dark:border-neutral-800 hover:border-black dark:hover:border-[#FFB515] transition-all duration-200 flex flex-col justify-between overflow-hidden shadow-xs hover:shadow-md group text-left relative"
+                    >
+                        <!-- Miniature 16:10 avec badges superposés -->
+                        <a 
+                            href="{{ url('/projet/logo-identite') }}" 
+                            class="block relative aspect-[16/10] overflow-hidden bg-neutral-100 dark:bg-neutral-800 group"
+                            aria-label="Création de Logo & Identité Visuelle Complète"
+                        >
+                            <img 
+                                src="{{ asset('images/service-design-branding.jpg') ?? '/images/service-design-branding.jpg' }}" 
+                                alt="Création de Logo & Identité Visuelle Complète" 
+                                class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
+                                loading="lazy"
+                            />
+                            
+                            <!-- Badge Catégorie en haut à gauche -->
+                            <div class="absolute top-3 left-3 flex items-center gap-1.5">
+                                <span class="inline-flex items-center px-2.5 py-0.5 rounded-none bg-black/90 text-white text-[10px] font-bold tracking-wide shadow-xs border border-white/10" x-text="currentLang === 'fr' ? 'Design graphique et identité visuelle' : 'Graphic Design & Visual Identity'">
+                                    Design graphique et identité visuelle
+                                </span>
+                            </div>
+
+                            <!-- Badge Express en haut à droite -->
+                            <div class="absolute top-3 right-3">
+                                <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-none bg-[#FFB515] text-black text-[10px] font-black uppercase tracking-wider shadow-xs">
+                                    <span>⚡ EXPRESS</span>
+                                </span>
+                            </div>
+
+                            <!-- Badge Délai indicatif en bas à gauche -->
+                            <div class="absolute bottom-2.5 left-3">
+                                <span class="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-none bg-black/90 backdrop-blur-md text-white text-[10px] font-bold shadow-xs border border-white/10">
+                                    <svg class="w-3 h-3 fill-current text-[#FFB515]" viewBox="0 0 24 24">
+                                        <path d="M19 4h-1V2h-2v2H8V2H6v2H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V6c0-1.1-.9-2-2-2zm0 16H5V9h14v11zM7 11h2v2H7v-2zm4 0h2v2h-2v-2zm4 0h2v2h-2v-2z"/>
+                                    </svg>
+                                    <span x-text="currentLang === 'fr' ? '4 à 7 jours ouvrés' : '4 to 7 business days'">4 à 7 jours ouvrés</span>
+                                </span>
+                            </div>
+                        </a>
+
+                        <!-- Corps de la carte -->
+                        <div class="p-5 flex flex-col flex-1 justify-between space-y-3">
+                            <div class="space-y-2.5">
+                                <!-- Titre de la prestation -->
+                                <h3 class="text-[16px] font-extrabold text-black dark:text-white leading-snug group-hover:text-[#B8860B] dark:group-hover:text-[#FFB515] transition-colors line-clamp-2">
+                                    <a href="{{ url('/projet/logo-identite') }}" class="hover:underline focus:outline-none">
+                                        Création de Logo & Identité Visuelle Complète
+                                    </a>
+                                </h3>
+
+                                <!-- Profil du Talent (Photo + Nom + Checkmark + Titre/Rôle) -->
+                                <div class="flex items-center gap-2.5 pt-0.5">
+                                    <img 
+                                        src="https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?auto=format&fit=crop&w=200&q=80" 
+                                        alt="Kévin A." 
+                                        class="w-7 h-7 rounded-none object-cover border border-neutral-300 dark:border-neutral-700 flex-shrink-0"
+                                    />
+                                    <div class="min-w-0 flex flex-col justify-center">
+                                        <div class="flex items-center gap-1.5">
+                                            <span class="text-xs font-bold text-neutral-800 dark:text-neutral-200 truncate">Kévin A.</span>
+                                            <span class="w-3.5 h-3.5 rounded-none bg-[#FFB515] text-black text-[9px] font-black inline-flex items-center justify-center flex-shrink-0" title="Compétence vérifiée">✓</span>
+                                        </div>
+                                        <span class="text-[11px] text-neutral-500 dark:text-neutral-400 truncate">Directeur Artistique & Brand Designer</span>
+                                    </div>
+                                </div>
+
+                                <!-- Description courte (2 lignes) -->
+                                <p 
+                                    class="text-xs text-neutral-600 dark:text-neutral-400 leading-relaxed font-normal"
+                                    style="display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden;"
+                                >
+                                    3 propositions uniques, charte chromatique, typographies et fichiers vectoriels HD (PNG, SVG, AI).
+                                </p>
+                            </div>
+
+                            <!-- Badge Statut & Avis clients fonctionnel (ZÉRO FICTIF) -->
+                            <div class="flex items-center gap-2.5 pt-2 border-t border-neutral-100 dark:border-neutral-800/80">
+                                <span class="px-2 py-0.5 rounded-none text-[10px] font-extrabold border {{ $statsLogo['badge_color'] }}">
+                                    <span x-show="currentLang === 'fr'">{{ $statsLogo['badge'] }}</span>
+                                    <span x-show="currentLang === 'en'">{{ $statsLogo['badge'] === 'Recommandé' ? 'Recommended' : ($statsLogo['badge'] === 'Compétence certifiée' ? 'Certified Skill' : 'Declared Skill') }}</span>
+                                </span>
+                                @if($statsLogo['has_reviews'])
+                                    <a 
+                                        href="{{ url('/projet/logo-identite') }}#avis-clients" 
+                                        class="text-xs font-bold text-neutral-700 dark:text-neutral-300 flex items-center gap-1 hover:text-[#B8860B] dark:hover:text-[#FFB515] transition-colors group/reviews"
+                                        :title="currentLang === 'fr' ? 'Consulter les {{ $statsLogo['count'] }} avis clients vérifiés' : 'View {{ $statsLogo['count'] }} verified customer reviews'"
+                                    >
+                                        <span class="text-[#FFB515]">★</span>
+                                        <span>{{ $statsLogo['rating'] }}</span>
+                                        <span class="font-normal text-neutral-500 dark:text-neutral-400 group-hover/reviews:underline" x-text="'(' + {{ $statsLogo['count'] }} + (currentLang === 'fr' ? ' avis)' : ' reviews)'))"></span>
+                                    </a>
+                                @else
+                                    <a 
+                                        href="{{ url('/projet/logo-identite') }}#avis-clients" 
+                                        class="text-xs font-normal text-neutral-500 dark:text-neutral-400 flex items-center gap-1 hover:text-[#B8860B] dark:hover:text-[#FFB515] transition-colors group/reviews"
+                                        :title="currentLang === 'fr' ? 'Aucun avis pour le moment. Soyez le premier à partager votre expérience.' : 'No reviews yet. Be the first to share your experience.'"
+                                    >
+                                        <span class="text-neutral-300 dark:text-neutral-600">★</span>
+                                        <span class="group-hover/reviews:underline" x-text="currentLang === 'fr' ? 'Aucun avis pour le moment' : 'No reviews yet'"></span>
+                                    </a>
+                                @endif
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Carte 3 : Pack 5 Vidéos Courtes Virales (Motion Design) -->
                     <div 
                         x-show="activeCategory === 'all' || activeCategory === 'motion'"
                         x-transition
-                        class="rounded-none bg-white dark:bg-[#141414] border border-[#E5E5E0] dark:border-neutral-800 hover:border-black dark:hover:border-neutral-600 transition-all duration-200 flex flex-col justify-between overflow-hidden shadow-sm hover:shadow-md group"
+                        class="rounded-none bg-white dark:bg-[#141414] border border-[#E5E5E0] dark:border-neutral-800 hover:border-black dark:hover:border-[#FFB515] transition-all duration-200 flex flex-col justify-between overflow-hidden shadow-xs hover:shadow-md group text-left relative"
                     >
-                        <!-- Image couverture 16:10 avec badges superposés -->
-                        <div class="relative aspect-[16/10] overflow-hidden bg-neutral-100 dark:bg-neutral-800">
+                        <!-- Miniature 16:10 avec badges superposés -->
+                        <a 
+                            href="{{ url('/projet/video-courte') }}" 
+                            class="block relative aspect-[16/10] overflow-hidden bg-neutral-100 dark:bg-neutral-800 group"
+                            aria-label="Pack 5 Vidéos Courtes Virales (Reels / TikTok)"
+                        >
                             <img 
                                 src="{{ asset('images/service-video-motion.jpg') ?? '/images/service-video-motion.jpg' }}" 
                                 alt="Pack 5 Vidéos Courtes Virales (Reels / TikTok)" 
                                 class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
+                                loading="lazy"
                             />
                             
-                            <!-- Badges supérieurs gauche -->
-                            <div class="absolute top-3.5 left-3.5 flex items-center gap-2">
-                                <span class="inline-flex items-center gap-1.5 px-3 py-1 rounded-none bg-black/85 backdrop-blur-md text-white text-[11px] font-bold shadow-xs border border-white/10">
-                                    <span class="w-2 h-2 rounded-none bg-emerald-400"></span>
-                                    <span>Certifié</span>
-                                </span>
-                                <span class="inline-flex items-center px-3 py-1 rounded-none bg-white/95 dark:bg-neutral-900/90 backdrop-blur-md text-black dark:text-white text-[11px] font-bold shadow-xs border border-black/10 dark:border-white/10">
-                                    Vidéo & Média
+                            <!-- Badge Catégorie en haut à gauche -->
+                            <div class="absolute top-3 left-3 flex items-center gap-1.5">
+                                <span class="inline-flex items-center px-2.5 py-0.5 rounded-none bg-black/90 text-white text-[10px] font-bold tracking-wide shadow-xs border border-white/10" x-text="currentLang === 'fr' ? 'Vidéo, Motion & Média' : 'Video, Motion & Media'">
+                                    Vidéo, Motion & Média
                                 </span>
                             </div>
 
-                            <!-- Badge inférieur gauche : Délai de livraison (Icône calendrier solide imposante - Rangée 1 Col 3) -->
-                            <div class="absolute bottom-3 left-3.5">
-                                <span class="inline-flex items-center gap-1.5 px-3 py-1 rounded-none bg-black/90 backdrop-blur-md text-white text-[11px] font-bold shadow-xs border border-white/10">
-                                    <svg class="w-3.5 h-3.5 fill-current text-[#FFB515]" viewBox="0 0 24 24">
+                            <!-- Badge Express en haut à droite -->
+                            <div class="absolute top-3 right-3">
+                                <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-none bg-[#FFB515] text-black text-[10px] font-black uppercase tracking-wider shadow-xs">
+                                    <span>⚡ EXPRESS</span>
+                                </span>
+                            </div>
+
+                            <!-- Badge Délai indicatif en bas à gauche -->
+                            <div class="absolute bottom-2.5 left-3">
+                                <span class="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-none bg-black/90 backdrop-blur-md text-white text-[10px] font-bold shadow-xs border border-white/10">
+                                    <svg class="w-3 h-3 fill-current text-[#FFB515]" viewBox="0 0 24 24">
                                         <path d="M19 4h-1V2h-2v2H8V2H6v2H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V6c0-1.1-.9-2-2-2zm0 16H5V9h14v11zM7 11h2v2H7v-2zm4 0h2v2h-2v-2zm4 0h2v2h-2v-2z"/>
                                     </svg>
-                                    <span>3 à 5 jours</span>
+                                    <span x-text="currentLang === 'fr' ? '3 à 5 jours ouvrés' : '3 to 5 business days'">3 à 5 jours ouvrés</span>
                                 </span>
                             </div>
-                        </div>
+                        </a>
 
-                        <!-- Corps du produit -->
-                        <div class="p-6 flex flex-col flex-1 justify-between text-left space-y-4">
-                            <div>
-                                <h3 class="text-lg font-extrabold text-black dark:text-white leading-snug group-hover:text-[#FFB515] transition-colors line-clamp-2">
-                                    Pack 5 Vidéos Courtes Virales (Reels / TikTok)
+                        <!-- Corps de la carte -->
+                        <div class="p-5 flex flex-col flex-1 justify-between space-y-3">
+                            <div class="space-y-2.5">
+                                <!-- Titre de la prestation -->
+                                <h3 class="text-[16px] font-extrabold text-black dark:text-white leading-snug group-hover:text-[#B8860B] dark:group-hover:text-[#FFB515] transition-colors line-clamp-2">
+                                    <a href="{{ url('/projet/video-courte') }}" class="hover:underline focus:outline-none">
+                                        Pack 5 Vidéos Courtes Virales (Reels / TikTok)
+                                    </a>
                                 </h3>
 
-                                <div class="text-xs text-neutral-600 dark:text-neutral-400 mt-2 flex items-center gap-1.5 font-medium">
-                                    <span>Par <strong class="text-black dark:text-white font-bold">Farid D.</strong></span>
-                                    <span>·</span>
-                                    <span class="font-bold text-[#B8860B] dark:text-[#FFB515]">Talent Club Pro</span>
+                                <!-- Profil du Talent (Photo + Nom + Checkmark + Titre/Rôle) -->
+                                <div class="flex items-center gap-2.5 pt-0.5">
+                                    <img 
+                                        src="https://images.unsplash.com/photo-1500648767791-00dcc994a43e?auto=format&fit=crop&w=200&q=80" 
+                                        alt="Farid D." 
+                                        class="w-7 h-7 rounded-none object-cover border border-neutral-300 dark:border-neutral-700 flex-shrink-0"
+                                    />
+                                    <div class="min-w-0 flex flex-col justify-center">
+                                        <div class="flex items-center gap-1.5">
+                                            <span class="text-xs font-bold text-neutral-800 dark:text-neutral-200 truncate">Farid D.</span>
+                                            <span class="w-3.5 h-3.5 rounded-none bg-[#FFB515] text-black text-[9px] font-black inline-flex items-center justify-center flex-shrink-0" title="Compétence vérifiée">✓</span>
+                                        </div>
+                                        <span class="text-[11px] text-neutral-500 dark:text-neutral-400 truncate">Monteur Vidéo & Motion Designer Senior</span>
+                                    </div>
                                 </div>
 
-                                <p class="text-xs text-neutral-600 dark:text-neutral-400 leading-relaxed mt-3 line-clamp-2">
+                                <!-- Description courte (2 lignes) -->
+                                <p 
+                                    class="text-xs text-neutral-600 dark:text-neutral-400 leading-relaxed font-normal"
+                                    style="display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden;"
+                                >
                                     Montage dynamique haute rétention, sous-titres animés, sound design percutant et formats 9:16.
                                 </p>
                             </div>
 
-                            <!-- Badges statut & Avis clients -->
-                            <div class="flex items-center gap-3 pt-1">
-                                <span class="px-2.5 py-0.5 rounded-none text-[11px] font-extrabold bg-[#FFF9EC] dark:bg-[#261D08] text-[#B8860B] dark:text-[#FFB515] border border-[#FFE7A3] dark:border-[#59430D]">
-                                    Tendance
+                            <!-- Badge Statut & Avis clients fonctionnel (ZÉRO FICTIF) -->
+                            <div class="flex items-center gap-2.5 pt-2 border-t border-neutral-100 dark:border-neutral-800/80">
+                                <span class="px-2 py-0.5 rounded-none text-[10px] font-extrabold border {{ $statsVideo['badge_color'] }}">
+                                    <span x-show="currentLang === 'fr'">{{ $statsVideo['badge'] }}</span>
+                                    <span x-show="currentLang === 'en'">{{ $statsVideo['badge'] === 'Recommandé' ? 'Recommended' : ($statsVideo['badge'] === 'Compétence certifiée' ? 'Certified Skill' : 'Declared Skill') }}</span>
                                 </span>
-                                <span class="text-xs font-bold text-neutral-700 dark:text-neutral-300 flex items-center gap-1">
-                                    <span class="text-[#FFB515]">★</span> 4.8 <span class="font-normal text-neutral-500 dark:text-neutral-400">(29 avis)</span>
+                                @if($statsVideo['has_reviews'])
+                                    <a 
+                                        href="{{ url('/projet/video-courte') }}#avis-clients" 
+                                        class="text-xs font-bold text-neutral-700 dark:text-neutral-300 flex items-center gap-1 hover:text-[#B8860B] dark:hover:text-[#FFB515] transition-colors group/reviews"
+                                        :title="currentLang === 'fr' ? 'Consulter les {{ $statsVideo['count'] }} avis clients vérifiés' : 'View {{ $statsVideo['count'] }} verified customer reviews'"
+                                    >
+                                        <span class="text-[#FFB515]">★</span>
+                                        <span>{{ $statsVideo['rating'] }}</span>
+                                        <span class="font-normal text-neutral-500 dark:text-neutral-400 group-hover/reviews:underline" x-text="'(' + {{ $statsVideo['count'] }} + (currentLang === 'fr' ? ' avis)' : ' reviews)'))"></span>
+                                    </a>
+                                @else
+                                    <a 
+                                        href="{{ url('/projet/video-courte') }}#avis-clients" 
+                                        class="text-xs font-normal text-neutral-500 dark:text-neutral-400 flex items-center gap-1 hover:text-[#B8860B] dark:hover:text-[#FFB515] transition-colors group/reviews"
+                                        :title="currentLang === 'fr' ? 'Aucun avis pour le moment. Soyez le premier à partager votre expérience.' : 'No reviews yet. Be the first to share your experience.'"
+                                    >
+                                        <span class="text-neutral-300 dark:text-neutral-600">★</span>
+                                        <span class="group-hover/reviews:underline" x-text="currentLang === 'fr' ? 'Aucun avis pour le moment' : 'No reviews yet'"></span>
+                                    </a>
+                                @endif
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Carte 4 : Design System & Refonte UI/UX Fintech Africaine (Design Graphique & UI) -->
+                    <div 
+                        x-show="activeCategory === 'all' || activeCategory === 'design'"
+                        x-transition
+                        class="rounded-none bg-white dark:bg-[#141414] border border-[#E5E5E0] dark:border-neutral-800 hover:border-black dark:hover:border-[#FFB515] transition-all duration-200 flex flex-col justify-between overflow-hidden shadow-xs hover:shadow-md group text-left relative"
+                    >
+                        <!-- Miniature 16:10 avec badges superposés -->
+                        <a 
+                            href="{{ url('/projet/uiux-design-system') }}" 
+                            class="block relative aspect-[16/10] overflow-hidden bg-neutral-100 dark:bg-neutral-800 group"
+                            aria-label="Design System & Refonte UI/UX Fintech Africaine"
+                        >
+                            <img 
+                                src="{{ asset('images/service-design-branding.jpg') ?? '/images/service-design-branding.jpg' }}" 
+                                alt="Design System & Refonte UI/UX Fintech Africaine" 
+                                class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
+                                loading="lazy"
+                            />
+                            
+                            <!-- Badge Catégorie en haut à gauche -->
+                            <div class="absolute top-3 left-3 flex items-center gap-1.5">
+                                <span class="inline-flex items-center px-2.5 py-0.5 rounded-none bg-black/90 text-white text-[10px] font-bold tracking-wide shadow-xs border border-white/10" x-text="currentLang === 'fr' ? 'Design graphique et identité visuelle' : 'Graphic Design & Visual Identity'">
+                                    Design graphique et identité visuelle
                                 </span>
                             </div>
 
-                            <!-- Footer Prix & Bouton Commander -->
-                            <div class="pt-4 border-t border-neutral-100 dark:border-neutral-800 flex items-center justify-between mt-auto">
-                                <div>
-                                    <div class="text-xl sm:text-2xl font-black text-black dark:text-white leading-none">
-                                        35 000 <span class="text-sm font-extrabold">FCFA</span>
-                                    </div>
-                                    <div class="text-[11px] text-neutral-400 line-through font-semibold mt-0.5">
-                                        60 000 FCFA
+                            <!-- Badge Express en haut à droite -->
+                            <div class="absolute top-3 right-3">
+                                <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-none bg-[#FFB515] text-black text-[10px] font-black uppercase tracking-wider shadow-xs">
+                                    <span>⚡ EXPRESS</span>
+                                </span>
+                            </div>
+
+                            <!-- Badge Délai indicatif en bas à gauche -->
+                            <div class="absolute bottom-2.5 left-3">
+                                <span class="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-none bg-black/90 backdrop-blur-md text-white text-[10px] font-bold shadow-xs border border-white/10">
+                                    <svg class="w-3 h-3 fill-current text-[#FFB515]" viewBox="0 0 24 24">
+                                        <path d="M19 4h-1V2h-2v2H8V2H6v2H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V6c0-1.1-.9-2-2-2zm0 16H5V9h14v11zM7 11h2v2H7v-2zm4 0h2v2h-2v-2zm4 0h2v2h-2v-2z"/>
+                                    </svg>
+                                    <span x-text="currentLang === 'fr' ? '7 à 15 jours ouvrés' : '7 to 15 business days'">7 à 15 jours ouvrés</span>
+                                </span>
+                            </div>
+                        </a>
+
+                        <!-- Corps de la carte -->
+                        <div class="p-5 flex flex-col flex-1 justify-between space-y-3">
+                            <div class="space-y-2.5">
+                                <!-- Titre de la prestation -->
+                                <h3 class="text-[16px] font-extrabold text-black dark:text-white leading-snug group-hover:text-[#B8860B] dark:group-hover:text-[#FFB515] transition-colors line-clamp-2">
+                                    <a href="{{ url('/projet/uiux-design-system') }}" class="hover:underline focus:outline-none">
+                                        Design System & Refonte UI/UX Fintech Africaine
+                                    </a>
+                                </h3>
+
+                                <!-- Profil du Talent (Photo + Nom + Checkmark + Titre/Rôle) -->
+                                <div class="flex items-center gap-2.5 pt-0.5">
+                                    <img 
+                                        src="https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?auto=format&fit=crop&w=200&q=80" 
+                                        alt="Studio Amina Design" 
+                                        class="w-7 h-7 rounded-none object-cover border border-neutral-300 dark:border-neutral-700 flex-shrink-0"
+                                    />
+                                    <div class="min-w-0 flex flex-col justify-center">
+                                        <div class="flex items-center gap-1.5">
+                                            <span class="text-xs font-bold text-neutral-800 dark:text-neutral-200 truncate">Studio Amina Design</span>
+                                            <span class="w-3.5 h-3.5 rounded-none bg-[#FFB515] text-black text-[9px] font-black inline-flex items-center justify-center flex-shrink-0" title="Compétence vérifiée">✓</span>
+                                        </div>
+                                        <span class="text-[11px] text-neutral-500 dark:text-neutral-400 truncate">Lead UI/UX Designer & Directrice Artistique</span>
                                     </div>
                                 </div>
 
-                                <a 
-                                    href="{{ url('/projet/video-courte') }}"
-                                    class="h-10 px-5 rounded-none bg-black hover:bg-neutral-800 active:bg-neutral-900 text-white dark:bg-[#FFB515] dark:text-black dark:hover:bg-[#E5A20C] font-bold text-xs inline-flex items-center gap-2 transition-all shadow-sm touch-manipulation active:scale-95 group"
+                                <!-- Description courte (2 lignes) -->
+                                <p 
+                                    class="text-xs text-neutral-600 dark:text-neutral-400 leading-relaxed font-normal"
+                                    style="display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden;"
                                 >
-                                    <span>Commander</span>
-                                    <svg class="w-3.5 h-3.5 fill-current transition-transform duration-150 group-hover:translate-x-1" viewBox="0 0 24 24">
-                                        <path d="M12 4l-1.41 1.41L16.17 11H4v2h12.17l-5.58 5.59L12 20l8-8z"/>
+                                    Conception d'identités visuelles impactantes, chartes graphiques complètes et interfaces.
+                                </p>
+                            </div>
+
+                            <!-- Badge Statut & Avis clients fonctionnel (ZÉRO FICTIF) -->
+                            <div class="flex items-center gap-2.5 pt-2 border-t border-neutral-100 dark:border-neutral-800/80">
+                                <span class="px-2 py-0.5 rounded-none text-[10px] font-extrabold border {{ $statsUiUx['badge_color'] }}">
+                                    <span x-show="currentLang === 'fr'">{{ $statsUiUx['badge'] }}</span>
+                                    <span x-show="currentLang === 'en'">{{ $statsUiUx['badge'] === 'Recommandé' ? 'Recommended' : ($statsUiUx['badge'] === 'Compétence certifiée' ? 'Certified Skill' : 'Declared Skill') }}</span>
+                                </span>
+                                @if($statsUiUx['has_reviews'])
+                                    <a 
+                                        href="{{ url('/projet/uiux-design-system') }}#avis-clients" 
+                                        class="text-xs font-bold text-neutral-700 dark:text-neutral-300 flex items-center gap-1 hover:text-[#B8860B] dark:hover:text-[#FFB515] transition-colors group/reviews"
+                                        :title="currentLang === 'fr' ? 'Consulter les {{ $statsUiUx['count'] }} avis clients vérifiés' : 'View {{ $statsUiUx['count'] }} verified customer reviews'"
+                                    >
+                                        <span class="text-[#FFB515]">★</span>
+                                        <span>{{ $statsUiUx['rating'] }}</span>
+                                        <span class="font-normal text-neutral-500 dark:text-neutral-400 group-hover/reviews:underline" x-text="'(' + {{ $statsUiUx['count'] }} + (currentLang === 'fr' ? ' avis)' : ' reviews)'))"></span>
+                                    </a>
+                                @else
+                                    <a 
+                                        href="{{ url('/projet/uiux-design-system') }}#avis-clients" 
+                                        class="text-xs font-normal text-neutral-500 dark:text-neutral-400 flex items-center gap-1 hover:text-[#B8860B] dark:hover:text-[#FFB515] transition-colors group/reviews"
+                                        :title="currentLang === 'fr' ? 'Aucun avis pour le moment. Soyez le premier à partager votre expérience.' : 'No reviews yet. Be the first to share your experience.'"
+                                    >
+                                        <span class="text-neutral-300 dark:text-neutral-600">★</span>
+                                        <span class="group-hover/reviews:underline" x-text="currentLang === 'fr' ? 'Aucun avis pour le moment' : 'No reviews yet'"></span>
+                                    </a>
+                                @endif
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Carte 5 : Stratégie Social Media & Copywriting de Vente 30 jours (Marketing & Contenu) -->
+                    <div 
+                        x-show="activeCategory === 'all' || activeCategory === 'marketing'"
+                        x-transition
+                        class="rounded-none bg-white dark:bg-[#141414] border border-[#E5E5E0] dark:border-neutral-800 hover:border-black dark:hover:border-[#FFB515] transition-all duration-200 flex flex-col justify-between overflow-hidden shadow-xs hover:shadow-md group text-left relative"
+                    >
+                        <!-- Miniature 16:10 avec badges superposés -->
+                        <a 
+                            href="{{ url('/projet/copywriting-social') }}" 
+                            class="block relative aspect-[16/10] overflow-hidden bg-neutral-100 dark:bg-neutral-800 group"
+                            aria-label="Stratégie Social Media & Copywriting de Vente 30 jours"
+                        >
+                            <img 
+                                src="{{ asset('images/case-study-puno.jpg') ?? '/images/case-study-puno.jpg' }}" 
+                                alt="Stratégie Social Media & Copywriting de Vente 30 jours" 
+                                class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
+                                loading="lazy"
+                            />
+                            
+                            <!-- Badge Catégorie en haut à gauche -->
+                            <div class="absolute top-3 left-3 flex items-center gap-1.5">
+                                <span class="inline-flex items-center px-2.5 py-0.5 rounded-none bg-black/90 text-white text-[10px] font-bold tracking-wide shadow-xs border border-white/10" x-text="currentLang === 'fr' ? 'Communication et marketing digital' : 'Digital Marketing & Communication'">
+                                    Communication et marketing digital
+                                </span>
+                            </div>
+
+                            <!-- Badge Express en haut à droite -->
+                            <div class="absolute top-3 right-3">
+                                <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-none bg-[#FFB515] text-black text-[10px] font-black uppercase tracking-wider shadow-xs">
+                                    <span>⚡ EXPRESS</span>
+                                </span>
+                            </div>
+
+                            <!-- Badge Délai indicatif en bas à gauche -->
+                            <div class="absolute bottom-2.5 left-3">
+                                <span class="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-none bg-black/90 backdrop-blur-md text-white text-[10px] font-bold shadow-xs border border-white/10">
+                                    <svg class="w-3 h-3 fill-current text-[#FFB515]" viewBox="0 0 24 24">
+                                        <path d="M19 4h-1V2h-2v2H8V2H6v2H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V6c0-1.1-.9-2-2-2zm0 16H5V9h14v11zM7 11h2v2H7v-2zm4 0h2v2h-2v-2zm4 0h2v2h-2v-2z"/>
                                     </svg>
-                                </a>
+                                    <span x-text="currentLang === 'fr' ? '5 à 10 jours ouvrés' : '5 to 10 business days'">5 à 10 jours ouvrés</span>
+                                </span>
+                            </div>
+                        </a>
+
+                        <!-- Corps de la carte -->
+                        <div class="p-5 flex flex-col flex-1 justify-between space-y-3">
+                            <div class="space-y-2.5">
+                                <!-- Titre de la prestation -->
+                                <h3 class="text-[16px] font-extrabold text-black dark:text-white leading-snug group-hover:text-[#B8860B] dark:group-hover:text-[#FFB515] transition-colors line-clamp-2">
+                                    <a href="{{ url('/projet/copywriting-social') }}" class="hover:underline focus:outline-none">
+                                        Stratégie Social Media & Copywriting de Vente 30 jours
+                                    </a>
+                                </h3>
+
+                                <!-- Profil du Talent (Photo + Nom + Checkmark + Titre/Rôle) -->
+                                <div class="flex items-center gap-2.5 pt-0.5">
+                                    <img 
+                                        src="https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=200&q=80" 
+                                        alt="Aïcha Copy & Strategy" 
+                                        class="w-7 h-7 rounded-none object-cover border border-neutral-300 dark:border-neutral-700 flex-shrink-0"
+                                    />
+                                    <div class="min-w-0 flex flex-col justify-center">
+                                        <div class="flex items-center gap-1.5">
+                                            <span class="text-xs font-bold text-neutral-800 dark:text-neutral-200 truncate">Aïcha Copy & Strategy</span>
+                                            <span class="w-3.5 h-3.5 rounded-none bg-[#FFB515] text-black text-[9px] font-black inline-flex items-center justify-center flex-shrink-0" title="Compétence vérifiée">✓</span>
+                                        </div>
+                                        <span class="text-[11px] text-neutral-500 dark:text-neutral-400 truncate">Copywriter & Stratège Social Media</span>
+                                    </div>
+                                </div>
+
+                                <!-- Description courte (2 lignes) -->
+                                <p 
+                                    class="text-xs text-neutral-600 dark:text-neutral-400 leading-relaxed font-normal"
+                                    style="display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden;"
+                                >
+                                    Rédaction de contenus persuasifs haute conversion et calendrier éditorial mensuel.
+                                </p>
+                            </div>
+
+                            <!-- Badge Statut & Avis clients fonctionnel (ZÉRO FICTIF) -->
+                            <div class="flex items-center gap-2.5 pt-2 border-t border-neutral-100 dark:border-neutral-800/80">
+                                <span class="px-2 py-0.5 rounded-none text-[10px] font-extrabold border {{ $statsCopy['badge_color'] }}">
+                                    <span x-show="currentLang === 'fr'">{{ $statsCopy['badge'] }}</span>
+                                    <span x-show="currentLang === 'en'">{{ $statsCopy['badge'] === 'Recommandé' ? 'Recommended' : ($statsCopy['badge'] === 'Compétence certifiée' ? 'Certified Skill' : 'Declared Skill') }}</span>
+                                </span>
+                                @if($statsCopy['has_reviews'])
+                                    <a 
+                                        href="{{ url('/projet/copywriting-social') }}#avis-clients" 
+                                        class="text-xs font-bold text-neutral-700 dark:text-neutral-300 flex items-center gap-1 hover:text-[#B8860B] dark:hover:text-[#FFB515] transition-colors group/reviews"
+                                        :title="currentLang === 'fr' ? 'Consulter les {{ $statsCopy['count'] }} avis clients vérifiés' : 'View {{ $statsCopy['count'] }} verified customer reviews'"
+                                    >
+                                        <span class="text-[#FFB515]">★</span>
+                                        <span>{{ $statsCopy['rating'] }}</span>
+                                        <span class="font-normal text-neutral-500 dark:text-neutral-400 group-hover/reviews:underline" x-text="'(' + {{ $statsCopy['count'] }} + (currentLang === 'fr' ? ' avis)' : ' reviews)'))"></span>
+                                    </a>
+                                @else
+                                    <a 
+                                        href="{{ url('/projet/copywriting-social') }}#avis-clients" 
+                                        class="text-xs font-normal text-neutral-500 dark:text-neutral-400 flex items-center gap-1 hover:text-[#B8860B] dark:hover:text-[#FFB515] transition-colors group/reviews"
+                                        :title="currentLang === 'fr' ? 'Aucun avis pour le moment. Soyez le premier à partager votre expérience.' : 'No reviews yet. Be the first to share your experience.'"
+                                    >
+                                        <span class="text-neutral-300 dark:text-neutral-600">★</span>
+                                        <span class="group-hover/reviews:underline" x-text="currentLang === 'fr' ? 'Aucun avis pour le moment' : 'No reviews yet'"></span>
+                                    </a>
+                                @endif
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Carte 6 : Application Mobile Flutter - Suivi GPS et Dispatching (Développement Web) -->
+                    <div 
+                        x-show="activeCategory === 'all' || activeCategory === 'dev'"
+                        x-transition
+                        class="rounded-none bg-white dark:bg-[#141414] border border-[#E5E5E0] dark:border-neutral-800 hover:border-black dark:hover:border-[#FFB515] transition-all duration-200 flex flex-col justify-between overflow-hidden shadow-xs hover:shadow-md group text-left relative"
+                    >
+                        <!-- Miniature 16:10 avec badges superposés -->
+                        <a 
+                            href="{{ url('/projet/application-mobile') }}" 
+                            class="block relative aspect-[16/10] overflow-hidden bg-neutral-100 dark:bg-neutral-800 group"
+                            aria-label="Application Mobile Flutter - Suivi GPS et Dispatching"
+                        >
+                            <img 
+                                src="{{ asset('images/service-flutter-app.jpg') ?? '/images/service-flutter-app.jpg' }}" 
+                                alt="Application Mobile Flutter - Suivi GPS et Dispatching" 
+                                class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
+                                loading="lazy"
+                            />
+                            
+                            <!-- Badge Catégorie en haut à gauche -->
+                            <div class="absolute top-3 left-3 flex items-center gap-1.5">
+                                <span class="inline-flex items-center px-2.5 py-0.5 rounded-none bg-black/90 text-white text-[10px] font-bold tracking-wide shadow-xs border border-white/10" x-text="currentLang === 'fr' ? 'Développement web et informatique' : 'Web & IT Development'">
+                                    Développement web et informatique
+                                </span>
+                            </div>
+
+                            <!-- Badge Express en haut à droite -->
+                            <div class="absolute top-3 right-3">
+                                <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-none bg-[#FFB515] text-black text-[10px] font-black uppercase tracking-wider shadow-xs">
+                                    <span>⚡ EXPRESS</span>
+                                </span>
+                            </div>
+
+                            <!-- Badge Délai indicatif en bas à gauche -->
+                            <div class="absolute bottom-2.5 left-3">
+                                <span class="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-none bg-black/90 backdrop-blur-md text-white text-[10px] font-bold shadow-xs border border-white/10">
+                                    <svg class="w-3 h-3 fill-current text-[#FFB515]" viewBox="0 0 24 24">
+                                        <path d="M19 4h-1V2h-2v2H8V2H6v2H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V6c0-1.1-.9-2-2-2zm0 16H5V9h14v11zM7 11h2v2H7v-2zm4 0h2v2h-2v-2zm4 0h2v2h-2v-2z"/>
+                                    </svg>
+                                    <span x-text="currentLang === 'fr' ? '15 à 30 jours selon périmètre' : '15 to 30 days depending on scope'">15 à 30 jours selon périmètre</span>
+                                </span>
+                            </div>
+                        </a>
+
+                        <!-- Corps de la carte -->
+                        <div class="p-5 flex flex-col flex-1 justify-between space-y-3">
+                            <div class="space-y-2.5">
+                                <!-- Titre de la prestation -->
+                                <h3 class="text-[16px] font-extrabold text-black dark:text-white leading-snug group-hover:text-[#B8860B] dark:group-hover:text-[#FFB515] transition-colors line-clamp-2">
+                                    <a href="{{ url('/projet/application-mobile') }}" class="hover:underline focus:outline-none">
+                                        Application Mobile Flutter - Suivi GPS et Dispatching
+                                    </a>
+                                </h3>
+
+                                <!-- Profil du Talent (Photo + Nom + Checkmark + Titre/Rôle) -->
+                                <div class="flex items-center gap-2.5 pt-0.5">
+                                    <img 
+                                        src="https://images.unsplash.com/photo-1522075469751-3a6694fb2f61?auto=format&fit=crop&w=200&q=80" 
+                                        alt="Koffi Tech Solutions" 
+                                        class="w-7 h-7 rounded-none object-cover border border-neutral-300 dark:border-neutral-700 flex-shrink-0"
+                                    />
+                                    <div class="min-w-0 flex flex-col justify-center">
+                                        <div class="flex items-center gap-1.5">
+                                            <span class="text-xs font-bold text-neutral-800 dark:text-neutral-200 truncate">Koffi Tech Solutions</span>
+                                            <span class="w-3.5 h-3.5 rounded-none bg-[#FFB515] text-black text-[9px] font-black inline-flex items-center justify-center flex-shrink-0" title="Compétence vérifiée">✓</span>
+                                        </div>
+                                        <span class="text-[11px] text-neutral-500 dark:text-neutral-400 truncate">Développeur Fullstack Laravel & Flutter</span>
+                                    </div>
+                                </div>
+
+                                <!-- Description courte (2 lignes) -->
+                                <p 
+                                    class="text-xs text-neutral-600 dark:text-neutral-400 leading-relaxed font-normal"
+                                    style="display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden;"
+                                >
+                                    Développement complet d'applications mobiles et web avec authentification et suivi GPS.
+                                </p>
+                            </div>
+
+                            <!-- Badge Statut & Avis clients fonctionnel (ZÉRO FICTIF) -->
+                            <div class="flex items-center gap-2.5 pt-2 border-t border-neutral-100 dark:border-neutral-800/80">
+                                <span class="px-2 py-0.5 rounded-none text-[10px] font-extrabold border {{ $statsApp['badge_color'] }}">
+                                    <span x-show="currentLang === 'fr'">{{ $statsApp['badge'] }}</span>
+                                    <span x-show="currentLang === 'en'">{{ $statsApp['badge'] === 'Recommandé' ? 'Recommended' : ($statsApp['badge'] === 'Compétence certifiée' ? 'Certified Skill' : 'Declared Skill') }}</span>
+                                </span>
+                                @if($statsApp['has_reviews'])
+                                    <a 
+                                        href="{{ url('/projet/application-mobile') }}#avis-clients" 
+                                        class="text-xs font-bold text-neutral-700 dark:text-neutral-300 flex items-center gap-1 hover:text-[#B8860B] dark:hover:text-[#FFB515] transition-colors group/reviews"
+                                        :title="currentLang === 'fr' ? 'Consulter les {{ $statsApp['count'] }} avis clients vérifiés' : 'View {{ $statsApp['count'] }} verified customer reviews'"
+                                    >
+                                        <span class="text-[#FFB515]">★</span>
+                                        <span>{{ $statsApp['rating'] }}</span>
+                                        <span class="font-normal text-neutral-500 dark:text-neutral-400 group-hover/reviews:underline" x-text="'(' + {{ $statsApp['count'] }} + (currentLang === 'fr' ? ' avis)' : ' reviews)'))"></span>
+                                    </a>
+                                @else
+                                    <a 
+                                        href="{{ url('/projet/application-mobile') }}#avis-clients" 
+                                        class="text-xs font-normal text-neutral-500 dark:text-neutral-400 flex items-center gap-1 hover:text-[#B8860B] dark:hover:text-[#FFB515] transition-colors group/reviews"
+                                        :title="currentLang === 'fr' ? 'Aucun avis pour le moment. Soyez le premier à partager votre expérience.' : 'No reviews yet. Be the first to share your experience.'"
+                                    >
+                                        <span class="text-neutral-300 dark:text-neutral-600">★</span>
+                                        <span class="group-hover/reviews:underline" x-text="currentLang === 'fr' ? 'Aucun avis pour le moment' : 'No reviews yet'"></span>
+                                    </a>
+                                @endif
                             </div>
                         </div>
                     </div>
@@ -2341,15 +2763,9 @@
             <div class="flex flex-col md:flex-row items-center justify-between gap-8 pb-10 border-b border-gray-100 dark:border-neutral-800">
                 
                 <!-- Logo Talent Club épuré -->
-                <a href="{{ url('/') }}" class="flex items-center gap-2 group" aria-label="Talent Club">
-                    <div class="flex flex-col leading-none">
-                        <div class="relative flex items-center">
-                            <span class="tc-logo-text text-[30px] text-black dark:text-white">talent</span>
-                            <span class="absolute top-[3px] left-[45px] w-2.5 h-2.5 rounded-full bg-[#FFB515]"></span>
-                            <span class="absolute -top-[5px] right-[0px] text-[#FFB515] text-[18px] font-bold">★</span>
-                        </div>
-                        <span class="tc-logo-text text-[30px] text-black dark:text-white -mt-1">club</span>
-                    </div>
+                <a href="{{ url('/') }}" class="flex items-center gap-2 group hover:opacity-90 transition-opacity" aria-label="Talent Club">
+                    <img src="{{ asset('images/logo.png') }}" alt="Talent Club" class="h-10 w-auto object-contain">
+                    <span class="sr-only">talent club</span>
                 </a>
 
                 <!-- Centre / Droite : Icônes authentiques (Facebook, Instagram, TikTok, LinkedIn) & Sélecteur rectangle -->
@@ -2524,7 +2940,7 @@
                         value="{{ old('client_name') }}"
                         required 
                         placeholder="Paul Dossou" 
-                        class="w-full h-11 px-4 rounded-none border @error('client_name') border-red-500 @else border-gray-300 dark:border-neutral-700 @enderror dark:bg-[#1A1A1A] dark:text-white text-sm focus:border-[#FFB515] focus:outline-none"
+                        class="w-full h-11 px-4 rounded-none border {{ $errors->has('client_name') ? 'border-red-500' : 'border-gray-300 dark:border-neutral-700' }} dark:bg-[#1A1A1A] dark:text-white text-sm focus:border-[#FFB515] focus:outline-none"
                     >
                     @error('client_name')
                         <p class="text-red-500 text-[11px] mt-0.5">{{ $message }}</p>
@@ -2539,7 +2955,7 @@
                             value="{{ old('client_email') }}"
                             required 
                             placeholder="paul@societe.com" 
-                            class="w-full h-11 px-4 rounded-none border @error('client_email') border-red-500 @else border-gray-300 dark:border-neutral-700 @enderror dark:bg-[#1A1A1A] dark:text-white text-sm focus:border-[#FFB515] focus:outline-none"
+                            class="w-full h-11 px-4 rounded-none border {{ $errors->has('client_email') ? 'border-red-500' : 'border-gray-300 dark:border-neutral-700' }} dark:bg-[#1A1A1A] dark:text-white text-sm focus:border-[#FFB515] focus:outline-none"
                         >
                         @error('client_email')
                             <p class="text-red-500 text-[11px] mt-0.5">{{ $message }}</p>
@@ -2553,7 +2969,7 @@
                             value="{{ old('client_phone') }}"
                             required 
                             placeholder="+229 00 00 00 00" 
-                            class="w-full h-11 px-4 rounded-none border @error('client_phone') border-red-500 @else border-gray-300 dark:border-neutral-700 @enderror dark:bg-[#1A1A1A] dark:text-white text-sm focus:border-[#FFB515] focus:outline-none"
+                            class="w-full h-11 px-4 rounded-none border {{ $errors->has('client_phone') ? 'border-red-500' : 'border-gray-300 dark:border-neutral-700' }} dark:bg-[#1A1A1A] dark:text-white text-sm focus:border-[#FFB515] focus:outline-none"
                         >
                         @error('client_phone')
                             <p class="text-red-500 text-[11px] mt-0.5">{{ $message }}</p>
@@ -2567,7 +2983,7 @@
                         required 
                         rows="3" 
                         placeholder="Expliquez brièvement votre projet ou vos objectifs..." 
-                        class="w-full p-3.5 rounded-none border @error('need_description') border-red-500 @else border-gray-300 dark:border-neutral-700 @enderror dark:bg-[#1A1A1A] dark:text-white text-sm focus:border-[#FFB515] focus:outline-none"
+                        class="w-full p-3.5 rounded-none border {{ $errors->has('need_description') ? 'border-red-500' : 'border-gray-300 dark:border-neutral-700' }} dark:bg-[#1A1A1A] dark:text-white text-sm focus:border-[#FFB515] focus:outline-none"
                     >{{ old('need_description') }}</textarea>
                     @error('need_description')
                         <p class="text-red-500 text-[11px] mt-0.5">{{ $message }}</p>
@@ -2653,7 +3069,7 @@
                         value="{{ old('login') }}"
                         required 
                         placeholder="Ex : TC-CAND-XXXX ou nom@exemple.com" 
-                        class="w-full h-11 px-4 rounded-none border @error('login') border-red-500 @else border-gray-300 dark:border-neutral-700 @enderror dark:bg-[#1A1A1A] dark:text-white text-sm focus:border-[#FFB515] focus:outline-none"
+                        class="w-full h-11 px-4 rounded-none border {{ $errors->has('login') ? 'border-red-500' : 'border-gray-300 dark:border-neutral-700' }} dark:bg-[#1A1A1A] dark:text-white text-sm focus:border-[#FFB515] focus:outline-none"
                     >
                     @error('login')
                         <p class="text-red-500 text-[11px] mt-0.5">{{ $message }}</p>
@@ -2666,7 +3082,7 @@
                         name="password"
                         required 
                         placeholder="••••••••" 
-                        class="w-full h-11 px-4 rounded-none border @error('password') border-red-500 @else border-gray-300 dark:border-neutral-700 @enderror dark:bg-[#1A1A1A] dark:text-white text-sm focus:border-[#FFB515] focus:outline-none"
+                        class="w-full h-11 px-4 rounded-none border {{ $errors->has('password') ? 'border-red-500' : 'border-gray-300 dark:border-neutral-700' }} dark:bg-[#1A1A1A] dark:text-white text-sm focus:border-[#FFB515] focus:outline-none"
                     >
                     @error('password')
                         <p class="text-red-500 text-[11px] mt-0.5">{{ $message }}</p>
@@ -2774,7 +3190,13 @@
             return {
                 darkMode: document.documentElement.classList.contains('dark'),
                 showScrollTop: false,
-                currentLang: 'fr',
+                currentLang: (function() {
+                    try {
+                        const stored = localStorage.getItem('talent_locale');
+                        if (stored === 'fr' || stored === 'en') return stored;
+                    } catch(e) {}
+                    return '{{ app()->getLocale() }}' === 'en' ? 'en' : 'fr';
+                })(),
                 langDropdown: false,
                 footerLangDropdown: false,
                 mobileMenu: false,
@@ -3089,8 +3511,19 @@
 
                 // Bascule de langue
                 setLang(lang) {
+                    if (lang !== 'fr' && lang !== 'en') lang = 'fr';
                     this.currentLang = lang;
-                    const msg = lang === 'fr' ? 'Langue changée en Français' : 'Language switched to English';
+                    try {
+                        localStorage.setItem('talent_locale', lang);
+                    } catch(e) {}
+                    document.cookie = "talent_locale=" + lang + ";path=/;max-age=31536000;SameSite=Lax";
+                    fetch('/lang/' + lang, {
+                        headers: { 'X-Requested-With': 'XMLHttpRequest' }
+                    }).catch(function() {});
+                    if (this.i18n && this.i18n[lang] && this.i18n[lang].page_title) {
+                        document.title = this.i18n[lang].page_title;
+                    }
+                    const msg = lang === 'fr' ? 'Langue basculée en Français' : 'Language switched to English';
                     this.showToast(msg);
                 },
 

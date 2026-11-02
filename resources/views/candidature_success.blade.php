@@ -5,7 +5,10 @@
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>Candidature Envoyée avec Succès — Talent Club</title>
     <meta name="description" content="Votre dossier de candidature a été transmis avec succès au comité technique de Talent Club.">
-    <link rel="icon" type="image/svg+xml" href="{{ asset('images/logo.svg') ?? '/images/logo.svg' }}">
+    <!-- Favicon -->
+    <link rel="icon" type="image/x-icon" href="{{ asset('favicon.ico') }}">
+    <link rel="icon" type="image/png" sizes="32x32" href="{{ asset('images/favicon.png') }}">
+    <link rel="apple-touch-icon" sizes="180x180" href="{{ asset('images/apple-touch-icon.png') }}">
 
     <!-- Google Fonts: Inter & Montserrat & Sora -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -86,15 +89,9 @@
             class="relative w-[85%] max-w-[340px] h-full bg-white border-l border-neutral-200 shadow-2xl flex flex-col z-10 overflow-y-auto"
         >
             <div class="p-6 border-b border-gray-100 flex items-center justify-between">
-                <a href="{{ url('/') }}" class="flex items-center gap-2">
-                    <div class="flex flex-col leading-none">
-                        <div class="relative flex items-center">
-                            <span class="tc-logo-text text-[26px] text-black">talent</span>
-                            <span class="absolute top-[3px] left-[38px] w-2 h-2 rounded-full bg-[#FFB515]"></span>
-                            <span class="absolute -top-[4px] right-[0px] text-[#FFB515] text-[15px] font-bold">★</span>
-                        </div>
-                        <span class="tc-logo-text text-[26px] text-black -mt-1">club</span>
-                    </div>
+                <a href="{{ url('/') }}" class="flex items-center gap-2" aria-label="Talent Club Accueil">
+                    <img src="{{ asset('images/logo.png') }}" alt="Talent Club" class="h-9 w-auto object-contain">
+                    <span class="sr-only">talent club</span>
                 </a>
                 <button 
                     @click="mobileMenu = false" 
@@ -140,15 +137,9 @@
         <div class="max-w-[1400px] mx-auto px-4 sm:px-6 lg:px-10 h-20 flex items-center justify-between">
             
             <!-- Logo Talent Club à gauche -->
-            <a href="{{ url('/') }}" class="flex items-center gap-2 group flex-shrink-0" aria-label="Talent Club Accueil">
-                <div class="flex flex-col leading-none">
-                    <div class="relative flex items-center">
-                        <span class="tc-logo-text text-[28px] md:text-[31px] text-black">talent</span>
-                        <span class="absolute top-[3px] left-[43px] md:left-[47px] w-2.5 h-2.5 rounded-full bg-[#FFB515] group-hover:scale-125 transition-transform"></span>
-                        <span class="absolute -top-[5px] right-[0px] text-[#FFB515] text-[17px] md:text-[18px] font-bold group-hover:rotate-45 transition-transform duration-300">★</span>
-                    </div>
-                    <span class="tc-logo-text text-[28px] md:text-[31px] text-black -mt-1 md:-mt-1.5">club</span>
-                </div>
+            <a href="{{ url('/') }}" class="flex items-center gap-2 group flex-shrink-0 hover:opacity-90 transition-opacity" aria-label="Talent Club Accueil">
+                <img src="{{ asset('images/logo.png') }}" alt="Talent Club" class="h-10 md:h-11 w-auto object-contain">
+                <span class="sr-only">talent club</span>
             </a>
 
             <!-- Liens principaux au centre -->

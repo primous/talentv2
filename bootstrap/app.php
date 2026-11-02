@@ -11,8 +11,22 @@ return Application::configure(basePath: dirname(__DIR__))
         health: '/up',
     )
     ->withMiddleware(function (Middleware $middleware): void {
-        //
+        $middleware->web(append: [
+            \App\Http\Middleware\SetLocale::class,
+        ]);
     })
     ->withExceptions(function (Exceptions $exceptions): void {
-        //
+        $exceptions->render(function (\Illuminate\Session\TokenMismatchException $e, \Illuminate\Http\Request $request) {
+            if ($request->expectsJson()) {
+                return response()->json([
+                    'message' => 'Votre session a expiré. Veuillez actualiser la page.'
+                ], 419);
+            }
+
+            if ($request->hasHeader('referer')) {
+                return redirect()->back()->with('error', 'Votre session a expiré pour des raisons de sécurité. La page a été actualisée, veuillez réessayer.');
+            }
+
+            return response()->view('errors.419', [], 419);
+        });
     })->create();

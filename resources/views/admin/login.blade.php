@@ -4,7 +4,10 @@
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>Connexion Administration — Talent Club</title>
-    <link rel="icon" type="image/svg+xml" href="{{ asset('images/logo.svg') ?? '/images/logo.svg' }}">
+    <!-- Favicon -->
+    <link rel="icon" type="image/x-icon" href="{{ asset('favicon.ico') }}">
+    <link rel="icon" type="image/png" sizes="32x32" href="{{ asset('images/favicon.png') }}">
+    <link rel="apple-touch-icon" sizes="180x180" href="{{ asset('images/apple-touch-icon.png') }}">
 
     <!-- Google Fonts: Inter & Montserrat & Sora -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -41,17 +44,11 @@
     <div class="w-full max-w-md">
         <!-- Logo Header -->
         <div class="text-center mb-6">
-            <a href="{{ url('/') }}" class="inline-flex items-center gap-2 group">
-                <div class="flex items-center">
-                    <div class="relative flex items-center">
-                        <span class="tc-logo-text text-[32px] text-tcDark tracking-tighter">talent</span>
-                        <span class="absolute top-[3px] left-[50px] w-2.5 h-2.5 rounded-full bg-tcYellow"></span>
-                        <span class="absolute -top-[5px] right-[0px] text-tcYellow text-[18px] font-bold">★</span>
-                    </div>
-                    <span class="tc-logo-text text-[32px] text-tcDark -mt-1.5 tracking-tighter">club</span>
-                </div>
+            <a href="{{ url('/') }}" class="inline-flex items-center justify-center group hover:opacity-90 transition-opacity" aria-label="Talent Club Accueil">
+                <img src="{{ asset('images/logo.png') }}" alt="Talent Club" class="h-16 w-auto object-contain mx-auto">
+                <span class="sr-only">talent club</span>
             </a>
-            <div class="mt-2">
+            <div class="mt-3">
                 <span class="px-3 py-1 rounded-full bg-tcYellow/20 text-tcDark text-xs font-bold uppercase tracking-wider">
                     Backoffice Direction & Validation
                 </span>

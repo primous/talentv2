@@ -6,6 +6,11 @@
     <title>{{ $service['title'] }} | Talent Club Pro</title>
     <meta name="description" content="{{ $service['description'] }}">
 
+    <!-- Favicon -->
+    <link rel="icon" type="image/x-icon" href="{{ asset('favicon.ico') }}">
+    <link rel="icon" type="image/png" sizes="32x32" href="{{ asset('images/favicon.png') }}">
+    <link rel="apple-touch-icon" sizes="180x180" href="{{ asset('images/apple-touch-icon.png') }}">
+
     <!-- Google Fonts: Inter (Headings) & Montserrat (Body) & Sora (Identique à la Landing Page) -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -321,8 +326,365 @@
                 mobileMenu: false,
                 langDropdown: false,
                 footerLangDropdown: false,
-                currentLang: 'fr',
-                setLang(l) { this.currentLang = l; },
+                currentLang: (function() {
+                    try {
+                        const stored = localStorage.getItem('talent_locale');
+                        if (stored === 'fr' || stored === 'en') return stored;
+                    } catch(e) {}
+                    return '{{ app()->getLocale() }}' === 'en' ? 'en' : 'fr';
+                })(),
+                setLang(l) {
+                    if (l !== 'fr' && l !== 'en') l = 'fr';
+                    this.currentLang = l;
+                    try { localStorage.setItem('talent_locale', l); } catch(e){}
+                    document.cookie = "talent_locale=" + l + ";path=/;max-age=31536000;SameSite=Lax";
+                    fetch('/lang/' + l, { headers: { 'X-Requested-With': 'XMLHttpRequest' } }).catch(function(){});
+                },
+                t(key) {
+                    return (this.i18n[this.currentLang] && this.i18n[this.currentLang][key]) 
+                        ? this.i18n[this.currentLang][key] 
+                        : (this.i18n['fr'][key] || key);
+                },
+                getBadgeText(badge) {
+                    if (this.currentLang !== 'en' || !badge) return badge;
+                    if (badge === 'Recommandé') return 'Recommended';
+                    if (badge.indexOf('certifi') !== -1) return 'Certified Skill';
+                    if (badge.indexOf('clar') !== -1) return 'Declared Skill';
+                    if (badge.indexOf('rifi') !== -1) return 'Verified Profile';
+                    return badge;
+                },
+                getDeliveryText(time) {
+                    if (this.currentLang !== 'en' || !time) return time;
+                    return time.replace(/jours ouvrés/gi, 'business days')
+                               .replace(/jours selon périmètre/gi, 'days depending on scope')
+                               .replace(/jours/gi, 'days')
+                               .replace(/à/gi, 'to')
+                               .replace(/heures/gi, 'hours');
+                },
+                getCategoryName(cat) {
+                    if (this.currentLang !== 'en') return cat;
+                    const map = {
+                        'Développement Web': 'Web Development',
+                        'Développement web et informatique': 'Web & IT Development',
+                        'Développement mobile et web': 'Mobile & Web Development',
+                        'Design Graphique & UI': 'Graphic & UI Design',
+                        'Design graphique et identité visuelle': 'Graphic Design & Branding',
+                        'Motion Design': 'Motion Design',
+                        'Vidéo, Motion & Média': 'Video, Motion & Media',
+                        'Marketing & Contenu': 'Marketing & Content',
+                        'Communication et marketing digital': 'Digital Marketing',
+                        'Service Professionnel': 'Professional Service'
+                    };
+                    return map[cat] || cat;
+                },
+                i18n: {
+                    fr: {
+                        nav_home: "Accueil",
+                        nav_talents: "Trouver un talent",
+                        nav_method: "La méthode",
+                        nav_join: "Devenir talent",
+                        nav_join_star: "Devenir talent ★",
+                        nav_faq: "FAQ",
+                        nav_login: "Se connecter",
+                        nav_my_requests: "Mes demandes",
+                        order_this_project: "Commander ce projet",
+                        cat_for_you: "Pour vous",
+                        cat_best_services: "Meilleurs services",
+                        cat_best_freelancers: "Meilleurs freelances",
+                        cat_design: "Design & Graphisme",
+                        cat_marketing: "Marketing digital",
+                        cat_media: "Audiovisuel",
+                        cat_dev: "Site & Développement",
+                        cat_writing: "Rédaction",
+                        cat_social: "Réseaux sociaux",
+                        cat_business: "Business",
+                        details_heading: "Détails de la prestation",
+                        category_label: "Catégorie :",
+                        level_label: "Niveau :",
+                        delivery_label: "Délai :",
+                        problem_solved_label: "Problème auquel" + " répond cette prestation :",
+                        target_audience_label: "À qui s'adresse" + " cette prestation :",
+                        what_talent_offers: "Ce que propose concrètement le talent",
+                        no_desc: "Aucune description détaillée supplémentaire n'a été renseignée pour cette prestation. Vous pouvez contacter le talent pour préciser votre besoin.",
+                        prerequisites_label: "Informations et ressources" + " à fournir par le client :",
+                        exclusions_label: "Limites et exclusions" + " de la prestation :",
+                        portfolio_title: "Réalisations & Portfolio du talent",
+                        verified_content: "Contenu vérifié",
+                        key_project: "Projet clé",
+                        published: "Publié",
+                        view_online: "Voir le projet en ligne",
+                        consult_file: "Consulter le fichier",
+                        consult_realization: "Consulter la réalisation",
+                        other_skills_prefix: "Autres compétences de",
+                        deliverables_title: "Livrables prévus :",
+                        mission_process_title: "Déroulement de la mission",
+                        about_provider: "À propos du prestataire",
+                        pro_badge: "Professionnel",
+                        available_badge: "● Disponible",
+                        contact_talent: "Contacter le talent",
+                        faq_title: "Questions" + " fréquentes concernant cette prestation :",
+                        indicative_rate: "Tarif indicatif",
+                        announced_delivery: "Délai annoncé :",
+                        selected_service: "Prestation sélectionnée :",
+                        order_button: "Commander cette prestation",
+                        trust_direct_exchange: "Échanges directs avec le talent",
+                        trust_talent_club: "Accompagnement et cadre Talent Club",
+                        trust_confidentiality: "Respect strict de la confidentialité",
+                        trust_validation: "Validation avant clôture de la mission",
+                        step: "Étape",
+                        of_steps: "sur 4",
+                        target_service: "Prestation ciblée",
+                        step1_title: "Vos coordonnées de contact",
+                        step1_sub: "Coordonnées strictement privées, nécessaires au suivi de votre demande.",
+                        full_name: "Votre Nom complet",
+                        full_name_ph: "Ex: Sophie Martin ou Mohamed Koné",
+                        company_label: "Entreprise ou organisation",
+                        optional: "(facultatif)",
+                        company_ph: "Ex: Société SARL, Startup, Projet personnel",
+                        email_label: "Adresse e-mail professionnelle",
+                        email_sub: "L'e-mail de confirmation et le suivi y seront envoyés.",
+                        phone_label: "Téléphone ou WhatsApp",
+                        step2_title: "Votre projet et vos attentes",
+                        step2_sub: "Précisez vos objectifs pour permettre au talent d'étudier la faisabilité.",
+                        project_title_label: "Objet ou titre du projet",
+                        project_title_ph: "Ex: Refonte de notre site internet vitrine",
+                        need_desc_label: "Décrivez précisément votre besoin",
+                        need_desc_ph: "Quel problème souhaitez-vous résoudre ou quel objectif atteindre ?",
+                        deliverable_label: "Résultat ou livrable attendu",
+                        deliverable_sub: "(format, quantité, caractéristiques)",
+                        deliverable_ph: "Ex: 5 pages web WordPress responsives, fichier Figma éditable...",
+                        budget_label: "Budget prévu",
+                        budget_ph: "Ex: 150 000 FCFA ou À discuter",
+                        deadline_label: "Date limite souhaitée",
+                        deadline_ph: "Ex: Sous 2 semaines, Fin du mois",
+                        step3_title: "Précisions, contraintes et références",
+                        step3_sub: "Ces informations facultatives permettent d'éviter les allers-retours.",
+                        target_audience_context_label: "À qui s'adresse le projet et dans quel contexte sera-t-il utilisé ?",
+                        provided_elements_label: "Quels éléments, contenus ou accès pouvez-vous fournir ?",
+                        constraints_label: "Contraintes ou éléments à éviter",
+                        priorities_label: "Priorités si tout ne peut être traité",
+                        success_criteria_label: "Comment saurez-vous que le résultat convient ?",
+                        validator_label: "Qui validera le livrable final ?",
+                        reference_links_label: "Exemples ou références à partager",
+                        craft_questions_title: "Précisions recommandées pour ce domaine",
+                        additional_notes_label: "Autre point important avant le démarrage",
+                        step4_title: "Récapitulatif de votre brief",
+                        step4_sub: "Vérifiez les informations avant l'envoi au talent.",
+                        contact_summary: "Contact",
+                        org_summary: "Organisation",
+                        budget_summary: "Budget envisagé",
+                        deadline_summary: "Délai souhaité",
+                        deliverable_summary: "Livrable attendu",
+                        step4_info: "Après envoi, vous recevrez un e-mail de confirmation. Le talent étudiera votre demande et décidera s'il accepte le projet.",
+                        btn_continue: "Continuer",
+                        btn_submit: "Envoyer ma demande de projet",
+                        btn_submitting: "Envoi en cours...",
+                        reviews_tag: "Retours d'expérience vérifiés",
+                        reviews_heading: "Avis clients",
+                        reviews_sub: "Avis et témoignages laissés par les clients sur cette prestation précise.",
+                        published_reviews: "avis publiés",
+                        published_review: "avis publié",
+                        verified_review_badge: "✓ Avis vérifié",
+                        no_reviews_title: "Aucun avis pour le moment",
+                        no_reviews_desc: "Aucun avis pour le moment. Soyez le premier à partager votre expérience.",
+                        leave_review_title: "Laisser un avis client",
+                        no_registration: "Sans inscription",
+                        leave_review_sub: "Partagez votre avis en toute transparence. Votre avis sera examiné par notre équipe avant publication.",
+                        your_name: "Votre nom ou prénom",
+                        your_rating: "Votre note",
+                        your_comment: "Votre commentaire",
+                        your_comment_ph: "Décrivez votre expérience : réactivité, respect des délais, qualité du travail livré...",
+                        min_chars: "Minimum 10 caractères",
+                        max_chars: "Max 1 500 caractères",
+                        your_email: "Votre e-mail",
+                        email_disclaimer: "🔒 Votre e-mail reste strictement confidentiel et ne sera jamais affiché publiquement. Il sert uniquement à la modération.",
+                        submit_review_btn: "Envoyer mon avis",
+                        review_legal_note: "En soumettant cet avis, vous attestez de la sincérité de votre témoignage.",
+                        rec_tag: "RECOMMANDATIONS COMPLÉMENTAIRES",
+                        rec_title: "Autres prestations certifiées similaires",
+                        rec_sub: "Explorez d'autres services indispensables pour faire passer votre marque au niveau supérieur.",
+                        view_all_catalog: "Voir tout le catalogue",
+                        certified_badge: "Certifié",
+                        by_author: "Par",
+                        review_thank_you: "Merci pour votre retour !",
+                        review_attention: "Attention",
+                        your_name_ph: "Ex. Alexandre D. ou Entreprise Zenith",
+                        email_optional: "Facultatif",
+                        submitting_review: "Envoi en cours...",
+                        review_form_unavailable: "Le formulaire d'avis est disponible uniquement sur les prestations publiées.",
+                        success_title: "Demande enregistrée !",
+                        success_desc_prefix: "Votre demande pour",
+                        success_desc_suffix: "a bien été enregistrée.",
+                        success_email_label: "E-mail de confirmation :",
+                        success_email_text: "un récapitulatif avec votre référence unique vous a été envoyé.",
+                        success_next_label: "Prochaine étape :",
+                        success_next_prefix: "le talent",
+                        success_next_suffix: "étudiera votre brief avant d'accepter le projet.",
+                        success_direct_text: "Dès son acceptation, vous recevrez ses coordonnées directes pour échanger.",
+                        success_btn: "Compris, continuer",
+                        choose_site_lang: "Choisir la langue du site",
+                        scroll_top_aria: "Remonter en haut de la page",
+                        footer_rights: "— Tous droits réservés.",
+                        footer_legal: "Mentions légales",
+                        footer_privacy: "Confidentialité",
+                        footer_tracking: "Suivi client",
+                        footer_join: "Devenir talent",
+                        footer_catalog: "Catalogue"
+                    },
+                    en: {
+                        nav_home: "Home",
+                        nav_talents: "Find a Talent",
+                        nav_method: "The Method",
+                        nav_join: "Become a Talent",
+                        nav_join_star: "Become a Talent ★",
+                        nav_faq: "FAQ",
+                        nav_login: "Log in",
+                        nav_my_requests: "My Requests",
+                        order_this_project: "Order this project",
+                        cat_for_you: "For You",
+                        cat_best_services: "Top Services",
+                        cat_best_freelancers: "Top Freelancers",
+                        cat_design: "Design & Graphics",
+                        cat_marketing: "Digital Marketing",
+                        cat_media: "Media & Video",
+                        cat_dev: "Web & Development",
+                        cat_writing: "Writing",
+                        cat_social: "Social Media",
+                        cat_business: "Business",
+                        details_heading: "Service Details",
+                        category_label: "Category:",
+                        level_label: "Level:",
+                        delivery_label: "Delivery:",
+                        problem_solved_label: "Problem addressed by this service:",
+                        target_audience_label: "Target audience for this service:",
+                        what_talent_offers: "What the talent concretely provides",
+                        no_desc: "No additional detailed description has been provided for this service. You can contact the talent to specify your requirements.",
+                        prerequisites_label: "Information & resources required from client:",
+                        exclusions_label: "Scope limits & exclusions:",
+                        portfolio_title: "Talent's Portfolio & Key Work",
+                        verified_content: "Verified Content",
+                        key_project: "Key Project",
+                        published: "Published",
+                        view_online: "View project online",
+                        consult_file: "View attached file",
+                        consult_realization: "View project realization",
+                        other_skills_prefix: "Other skills from",
+                        deliverables_title: "Planned Deliverables:",
+                        mission_process_title: "Project Workflow",
+                        about_provider: "About the Provider",
+                        pro_badge: "Professional",
+                        available_badge: "● Available",
+                        contact_talent: "Contact the talent",
+                        faq_title: "Frequently Asked Questions about this service:",
+                        indicative_rate: "Starting Price",
+                        announced_delivery: "Estimated delivery:",
+                        selected_service: "Selected service:",
+                        order_button: "Order this service",
+                        trust_direct_exchange: "Direct messaging with talent",
+                        trust_talent_club: "Talent Club mediation & framework",
+                        trust_confidentiality: "Strict NDA & confidentiality",
+                        trust_validation: "Approval before mission completion",
+                        step: "Step",
+                        of_steps: "of 4",
+                        target_service: "Targeted service",
+                        step1_title: "Your Contact Information",
+                        step1_sub: "Strictly private information required to process your request.",
+                        full_name: "Your Full Name",
+                        full_name_ph: "e.g. John Doe or Jane Smith",
+                        company_label: "Company or organization",
+                        optional: "(optional)",
+                        company_ph: "e.g. Acme Corp, Startup, Personal project",
+                        email_label: "Business email address",
+                        email_sub: "Confirmation and order tracking will be sent here.",
+                        phone_label: "Phone or WhatsApp",
+                        step2_title: "Your Project & Requirements",
+                        step2_sub: "Specify your objectives so the talent can review feasibility.",
+                        project_title_label: "Project subject or title",
+                        project_title_ph: "e.g. Redesign of showcase website",
+                        need_desc_label: "Describe your requirement in detail",
+                        need_desc_ph: "What problem do you want to solve or goal to achieve?",
+                        deliverable_label: "Expected outcome or deliverable",
+                        deliverable_sub: "(format, quantity, specifications)",
+                        deliverable_ph: "e.g. 5 responsive pages, editable Figma file...",
+                        budget_label: "Planned budget",
+                        budget_ph: "e.g. 150,000 FCFA or Negotiable",
+                        deadline_label: "Desired deadline",
+                        deadline_ph: "e.g. Within 2 weeks, End of month",
+                        step3_title: "Details, Constraints & References",
+                        step3_sub: "Optional details to avoid unnecessary back-and-forth.",
+                        target_audience_context_label: "Who is this project for and what is the operating context?",
+                        provided_elements_label: "What assets, copy or credentials can you provide?",
+                        constraints_label: "Constraints or elements to avoid",
+                        priorities_label: "Priorities if scope needs phasing",
+                        success_criteria_label: "How will you know the outcome is successful?",
+                        validator_label: "Who will approve the final deliverable?",
+                        reference_links_label: "Inspiration or references to share",
+                        craft_questions_title: "Recommended details for this domain",
+                        additional_notes_label: "Other important notes before starting",
+                        step4_title: "Summary of your Brief",
+                        step4_sub: "Review your information before submitting to the talent.",
+                        contact_summary: "Contact",
+                        org_summary: "Organization",
+                        budget_summary: "Estimated budget",
+                        deadline_summary: "Desired deadline",
+                        deliverable_summary: "Expected deliverable",
+                        step4_info: "After submission, you will receive a confirmation email. The talent will review your brief.",
+                        btn_continue: "Continue",
+                        btn_submit: "Send My Project Request",
+                        btn_submitting: "Sending...",
+                        reviews_tag: "Verified Feedback",
+                        reviews_heading: "Customer Reviews",
+                        reviews_sub: "Authentic reviews and ratings left by clients for this specific service.",
+                        published_reviews: "published reviews",
+                        published_review: "published review",
+                        verified_review_badge: "✓ Verified Review",
+                        no_reviews_title: "No reviews yet",
+                        no_reviews_desc: "No reviews yet. Be the first to share your experience.",
+                        leave_review_title: "Leave a Customer Review",
+                        no_registration: "No registration required",
+                        leave_review_sub: "Share your genuine feedback. Reviews are verified before publication.",
+                        your_name: "Your full name",
+                        your_rating: "Your rating",
+                        your_comment: "Your comment",
+                        your_comment_ph: "Describe your experience: responsiveness, deadline respect, quality of work...",
+                        min_chars: "Minimum 10 characters",
+                        max_chars: "Max 1,500 characters",
+                        your_email: "Your email",
+                        email_disclaimer: "🔒 Your email stays strictly confidential and will never be published.",
+                        submit_review_btn: "Submit My Review",
+                        review_legal_note: "By submitting this review, you certify the sincerity of your feedback.",
+                        rec_tag: "ADDITIONAL RECOMMENDATIONS",
+                        rec_title: "Other Similar Certified Services",
+                        rec_sub: "Explore other essential services to take your brand to the next level.",
+                        view_all_catalog: "View entire catalog",
+                        certified_badge: "Certified",
+                        by_author: "By",
+                        review_thank_you: "Thank you for your feedback!",
+                        review_attention: "Notice",
+                        your_name_ph: "e.g. Alexandre D. or Zenith Enterprise",
+                        email_optional: "Optional",
+                        submitting_review: "Submitting...",
+                        review_form_unavailable: "The review form is only available for published services.",
+                        success_title: "Request Submitted!",
+                        success_desc_prefix: "Your request for",
+                        success_desc_suffix: "has been successfully submitted.",
+                        success_email_label: "Confirmation email:",
+                        success_email_text: "a summary with your unique tracking reference has been sent to you.",
+                        success_next_label: "Next step:",
+                        success_next_prefix: "the talent",
+                        success_next_suffix: "will review your brief before accepting the project.",
+                        success_direct_text: "Upon acceptance, you will receive their direct contact details.",
+                        success_btn: "Got it, continue",
+                        choose_site_lang: "Choose website language",
+                        scroll_top_aria: "Back to top of page",
+                        footer_rights: "— All rights reserved.",
+                        footer_legal: "Legal notice",
+                        footer_privacy: "Privacy policy",
+                        footer_tracking: "Client tracking",
+                        footer_join: "Become a talent",
+                        footer_catalog: "Catalog"
+                    }
+                },
                 orderSuccess: {{ session('project_success') ? 'true' : 'false' }},
                 orderModalOpen: {{ (!empty($errors) && $errors->any()) ? 'true' : 'false' }},
                 orderStep: {{ (!empty($errors) && $errors->any()) ? 1 : 1 }},
@@ -350,26 +712,36 @@
                     this.stepError = '';
                     if (this.orderStep === 1) {
                         if (!this.clientName || this.clientName.trim().length < 2) {
-                            this.stepError = 'Veuillez saisir votre nom complet (au moins 2 caractères).';
+                            this.stepError = this.currentLang === 'en'
+                                ? 'Please enter your full name (at least 2 characters).'
+                                : 'Veuillez saisir votre nom complet (au moins 2 caractères).';
                             return;
                         }
                         const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
                         if (!this.clientEmail || !emailRegex.test(this.clientEmail.trim())) {
-                            this.stepError = 'Veuillez saisir une adresse e-mail professionnelle valide.';
+                            this.stepError = this.currentLang === 'en'
+                                ? 'Please enter a valid business email address.'
+                                : 'Veuillez saisir une adresse e-mail professionnelle valide.';
                             return;
                         }
                         if (!this.clientPhone || this.clientPhone.trim().length < 6) {
-                            this.stepError = 'Veuillez renseigner votre numéro WhatsApp ou téléphone (au moins 6 caractères).';
+                            this.stepError = this.currentLang === 'en'
+                                ? 'Please enter your WhatsApp or phone number (at least 6 characters).'
+                                : 'Veuillez renseigner votre numéro WhatsApp ou téléphone (au moins 6 caractères).';
                             return;
                         }
                         this.orderStep = 2;
                     } else if (this.orderStep === 2) {
                         if (!this.projectTitle || this.projectTitle.trim().length < 2) {
-                            this.stepError = 'Veuillez renseigner l\'objet ou le titre de votre projet.';
+                            this.stepError = this.currentLang === 'en'
+                                ? 'Please enter the title or subject of your project.'
+                                : 'Veuillez renseigner l\'objet ou le titre de votre projet.';
                             return;
                         }
                         if (!this.needDescription || this.needDescription.trim().length < 10) {
-                            this.stepError = 'Veuillez décrire précisément votre besoin de projet (au moins 10 caractères).';
+                            this.stepError = this.currentLang === 'en'
+                                ? 'Please describe your project need in detail (at least 10 characters).'
+                                : 'Veuillez décrire précisément votre besoin de projet (au moins 10 caractères).';
                             return;
                         }
                         this.orderStep = 3;
@@ -547,15 +919,9 @@
             class="relative w-[85%] max-w-[340px] h-full bg-white dark:bg-[#161616] shadow-2xl flex flex-col z-10 overflow-y-auto"
         >
             <div class="p-6 border-b border-gray-100 dark:border-neutral-800 flex items-center justify-between">
-                <a href="{{ url('/') }}" class="flex items-center gap-2">
-                    <div class="flex flex-col leading-none">
-                        <div class="relative flex items-center">
-                            <span class="tc-logo-text text-[26px] text-black dark:text-white">talent</span>
-                            <span class="absolute top-[3px] left-[38px] w-2 h-2 rounded-full bg-[#FFB515]"></span>
-                            <span class="absolute -top-[4px] right-[0px] text-[#FFB515] text-[15px] font-bold">★</span>
-                        </div>
-                        <span class="tc-logo-text text-[26px] text-black dark:text-white -mt-1">club</span>
-                    </div>
+                <a href="{{ url('/') }}" class="flex items-center gap-2 hover:opacity-90 transition-opacity" aria-label="Talent Club Accueil">
+                    <img src="{{ asset('images/logo.png') }}" alt="Talent Club" class="h-9 w-auto object-contain">
+                    <span class="sr-only">talent club</span>
                 </a>
                 <button 
                     @click="mobileMenu = false" 
@@ -604,7 +970,7 @@
                             <path d="M10 20v-6h4v6h5v-8h3L12 3 2 12h3v8z"/>
                         </svg>
                     </div>
-                    <span>Accueil</span>
+                    <span x-text="t('nav_home')">Accueil</span>
                 </a>
 
                 <!-- 2. Trouver un talent — Loupe solide et massive (Rangée 1 Col 1) -->
@@ -617,7 +983,7 @@
                             <path d="M10 2a8 8 0 016.32 12.906l4.387 4.387a1.5 1.5 0 01-2.122 2.122l-4.387-4.387A8 8 0 1110 2zm0 3.5a4.5 4.5 0 100 9 4.5 4.5 0 000-9z"/>
                         </svg>
                     </div>
-                    <span>Trouver un talent</span>
+                    <span x-text="t('nav_talents')">Trouver un talent</span>
                 </a>
 
                 <!-- 3. La méthode — Rouage mécanique solide (Rangée 4 Col 2) -->
@@ -630,7 +996,7 @@
                             <path d="M19.14 12.94c.04-.3.06-.61.06-.94 0-.32-.02-.64-.07-.94l2.03-1.58a.49.49 0 00.12-.61l-1.92-3.32a.488.488 0 00-.59-.22l-2.39.96c-.5-.38-1.03-.7-1.62-.94l-.36-2.54a.484.484 0 00-.48-.41h-3.84c-.24 0-.43.17-.47.41l-.36 2.54c-.59.24-1.13.57-1.62.94l-2.39-.96c-.22-.08-.47 0-.59.22L2.74 8.87c-.12.21-.08.47.12.61l2.03 1.58c-.05.3-.09.63-.09.94s.02.64.07.94l-2.03 1.58a.49.49 0 00-.12.61l1.92 3.32c.12.22.37.29.59.22l2.39-.96c.5.38 1.03.7 1.62.94l.36 2.54c.05.24.24.41.48.41h3.84c.24 0 .44-.17.47-.41l.36-2.54c.59-.24 1.13-.56 1.62-.94l2.39.96c.22.08.47 0 .59-.22l1.92-3.32c.12-.22.07-.47-.12-.61l-2.01-1.58zM12 15.6c-1.98 0-3.6-1.62-3.6-3.6s1.62-3.6 3.6-3.6 3.6 1.62 3.6 3.6-1.62 3.6-3.6 3.6z"/>
                         </svg>
                     </div>
-                    <span>La méthode</span>
+                    <span x-text="t('nav_method')">La méthode</span>
                 </a>
 
                 <!-- 4. FAQ — Cercle info solide (Rangée 6 Col 1) -->
@@ -643,7 +1009,7 @@
                             <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-6h2v6zm0-8h-2V7h2v2z"/>
                         </svg>
                     </div>
-                    <span>FAQ</span>
+                    <span x-text="t('nav_faq')">FAQ</span>
                 </a>
 
                 <!-- Séparateur -->
@@ -659,7 +1025,7 @@
                             <path d="M15 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm-9-2V7H4v3H1v2h3v3h2v-3h3v-2H6zm9 4c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z"/>
                         </svg>
                     </div>
-                    <span>Devenir talent</span>
+                    <span x-text="t('nav_join')">Devenir talent</span>
                 </a>
 
                 <!-- 6. Se connecter — Avion en papier solide (Rangée 7 Col 3) -->
@@ -672,7 +1038,7 @@
                             <path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z"/>
                         </svg>
                     </div>
-                    <span>Se connecter</span>
+                    <span x-text="t('nav_login')">Se connecter</span>
                 </a>
             </div>
 
@@ -682,7 +1048,7 @@
                     @click="mobileMenu = false; openOrder()" 
                     class="w-full h-12 flex items-center justify-center gap-2 bg-[#FFB515] hover:bg-[#E5A20C] active:bg-[#D4950A] text-black font-extrabold text-[15px] rounded-none shadow-md transition-all touch-manipulation active:scale-95 group"
                 >
-                    <span>Commander ce projet</span>
+                    <span x-text="t('order_this_project')">Commander ce projet</span>
                     <!-- Flèche solide (Rangée 5 Col 3) -->
                     <svg class="w-4 h-4 fill-current transition-transform duration-150 group-hover:translate-x-1" viewBox="0 0 24 24">
                         <path d="M12 4l-1.41 1.41L16.17 11H4v2h12.17l-5.58 5.59L12 20l8-8z"/>
@@ -700,33 +1066,27 @@
         <div class="max-w-[1400px] mx-auto px-4 sm:px-6 lg:px-10 h-20 flex items-center justify-between">
             
             <!-- Logo Talent Club à gauche -->
-            <a href="{{ url('/') }}" class="flex items-center gap-2 group flex-shrink-0" aria-label="Talent Club Accueil">
-                <div class="flex flex-col leading-none">
-                    <div class="relative flex items-center">
-                        <span class="tc-logo-text text-[28px] md:text-[31px] text-black dark:text-white">talent</span>
-                        <span class="absolute top-[3px] left-[43px] md:left-[47px] w-2.5 h-2.5 rounded-full bg-[#FFB515] group-hover:scale-125 transition-transform"></span>
-                        <span class="absolute -top-[5px] right-[0px] text-[#FFB515] text-[17px] md:text-[18px] font-bold group-hover:rotate-45 transition-transform duration-300">★</span>
-                    </div>
-                    <span class="tc-logo-text text-[28px] md:text-[31px] text-black dark:text-white -mt-1 md:-mt-1.5">club</span>
-                </div>
+            <a href="{{ url('/') }}" class="flex items-center gap-2 group flex-shrink-0 hover:opacity-90 transition-opacity" aria-label="Talent Club Accueil">
+                <img src="{{ asset('images/logo.png') }}" alt="Talent Club" class="h-10 md:h-11 w-auto object-contain">
+                <span class="sr-only">talent club</span>
             </a>
 
             <!-- Liens principaux au centre (Sans Réalisations) -->
             <nav class="hidden lg:flex items-center gap-7 xl:gap-8 text-[15px] font-medium text-[#4A5568] dark:text-neutral-300">
                 <a href="{{ url('/') }}" class="hover:text-black dark:hover:text-white transition-colors py-1">
-                    Accueil
+                    <span x-text="t('nav_home')">Accueil</span>
                 </a>
                 <a href="{{ url('/talents') }}" class="hover:text-black dark:hover:text-white transition-colors py-1">
-                    Trouver un talent
+                    <span x-text="t('nav_talents')">Trouver un talent</span>
                 </a>
                 <a href="{{ url('/#methode') }}" class="hover:text-black dark:hover:text-white transition-colors py-1">
-                    La méthode
+                    <span x-text="t('nav_method')">La méthode</span>
                 </a>
                 <a href="{{ route('candidature.create') }}" class="hover:text-black transition-colors py-1 font-bold text-black">
-                    Devenir talent ★
+                    <span x-text="t('nav_join_star')">Devenir talent ★</span>
                 </a>
                 <a href="{{ url('/#faq') }}" class="hover:text-black dark:hover:text-white transition-colors py-1">
-                    FAQ
+                    <span x-text="t('nav_faq')">FAQ</span>
                 </a>
             </nav>
 
@@ -761,14 +1121,14 @@
                         class="absolute right-0 mt-2 w-36 bg-white dark:bg-neutral-900 rounded-none shadow-xl border border-neutral-200 dark:border-neutral-800 py-1.5 z-50 text-left"
                     >
                         <button 
-                            @click="currentLang = 'fr'; langDropdown = false"
+                            @click="setLang('fr'); langDropdown = false"
                             class="w-full px-4 py-2 text-xs font-medium text-neutral-700 dark:text-neutral-300 hover:bg-neutral-50 dark:hover:bg-neutral-800 flex items-center justify-between transition-colors"
                         >
                             <span class="flex items-center gap-2"><span>🇫🇷</span> <span>Français</span></span>
                             <span x-show="currentLang === 'fr'" class="text-[#FFB515] font-bold">✓</span>
                         </button>
                         <button 
-                            @click="currentLang = 'en'; langDropdown = false"
+                            @click="setLang('en'); langDropdown = false"
                             class="w-full px-4 py-2 text-xs font-medium text-neutral-700 dark:text-neutral-300 hover:bg-neutral-50 dark:hover:bg-neutral-800 flex items-center justify-between transition-colors"
                         >
                             <span class="flex items-center gap-2"><span>🇬🇧</span> <span>English</span></span>
@@ -782,7 +1142,7 @@
                     href="{{ route('candidat.login') }}"
                     class="h-10 px-5 rounded-none border-2 border-black dark:border-neutral-600 hover:bg-[#111111] hover:text-white dark:hover:bg-white dark:hover:text-black text-[#111111] dark:text-white font-black text-xs transition-all duration-150 flex items-center gap-2 touch-manipulation active:scale-95"
                 >
-                    <span>Se connecter</span>
+                    <span x-text="t('nav_login')">Se connecter</span>
                     <!-- Profil solide imposant (Rangée 2 Col 2) -->
                     <svg class="w-3.5 h-3.5 fill-current" viewBox="0 0 24 24">
                         <path d="M15 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm-9-2V7H4v3H1v2h3v3h2v-3h3v-2H6zm9 4c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z"/>
@@ -791,9 +1151,8 @@
 
             </div>
 
-            <!-- Outils mobiles directs (Bascule Thème + Menu Hamburger) -->
-
-
+            <!-- Outils mobiles directs (Menu Hamburger) -->
+            <div class="flex items-center gap-2 lg:hidden">
                 <!-- Mobile Hamburger — Imposant, rectangulaire, 3 barres pleines (Rangée 5 Col 2) -->
                 <button 
                     @click="mobileMenu = true" 
@@ -834,44 +1193,44 @@
                 >
                     <a href="{{ url('/talents') }}" class="flex items-center gap-1.5 px-3 py-1 text-neutral-600 dark:text-neutral-400 hover:text-black dark:hover:text-white pb-2.5 border-b-2 border-transparent">
                         <svg class="w-3.5 h-3.5 fill-current text-[#FFB515]" viewBox="0 0 24 24"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-1 17.93c-3.95-.49-7-3.85-7-7.93 0-.62.08-1.21.21-1.79L9 15v1c0 1.1.9 2 2 2v1.93zm6.9-2.54c-.26-.81-1-1.39-1.9-1.39h-1v-3c0-.55-.45-1-1-1H8v-2h2c.55 0 1-.45 1-1V7h2c1.1 0 2-.9 2-2v-.41c2.93 1.19 5 4.06 5 7.41 0 2.08-.8 3.97-2.1 5.39z"/></svg>
-                        <span>Pour vous</span>
+                        <span x-text="t('cat_for_you')">Pour vous</span>
                     </a>
                     <a href="{{ url('/talents') }}" class="flex items-center gap-1.5 px-3 py-1 text-neutral-600 dark:text-neutral-400 hover:text-black dark:hover:text-white pb-2.5 border-b-2 border-transparent">
                         <svg class="w-3.5 h-3.5 fill-current text-[#FFB515]" viewBox="0 0 24 24"><path d="M19 5h-2V3H7v2H5c-1.1 0-2 .9-2 2v1c0 2.55 1.92 4.63 4.39 4.94.63 1.5 1.98 2.63 3.61 2.96V19H7v2h10v-2h-4v-3.1c1.63-.33 2.98-1.46 3.61-2.96C19.08 12.63 21 10.55 21 8V7c0-1.1-.9-2-2-2zM5 8V7h2v3.82C5.84 10.4 5 9.3 5 8zm14 0c0 1.3-.84 2.4-2 2.82V7h2v1z"/></svg>
-                        <span>Meilleurs services</span>
+                        <span x-text="t('cat_best_services')">Meilleurs services</span>
                     </a>
                     <a href="{{ url('/talents') }}" class="flex items-center gap-1.5 px-3 py-1 text-neutral-600 dark:text-neutral-400 hover:text-black dark:hover:text-white pb-2.5 border-b-2 border-transparent">
                         <svg class="w-3.5 h-3.5 fill-current text-[#FFB515]" viewBox="0 0 24 24"><path d="M5 16L3 5l5.5 5L12 4l3.5 6L21 5l-2 11H5zm14 3c0 .55-.45 1-1 1H6c-.55 0-1-.45-1-1v-1h14v1z"/></svg>
-                        <span>Meilleurs freelances</span>
+                        <span x-text="t('cat_best_freelancers')">Meilleurs freelances</span>
                     </a>
                     <a href="{{ url('/talents') }}" class="flex items-center gap-1.5 px-3 py-1 text-neutral-600 dark:text-neutral-400 hover:text-black dark:hover:text-white pb-2.5 border-b-2 border-transparent">
                         <svg class="w-3.5 h-3.5 fill-current" viewBox="0 0 24 24"><path d="M12 3c-4.97 0-9 4.03-9 9 0 2.12.74 4.07 1.97 5.61L4.35 19A1.996 1.996 0 006 21h12c1.1 0 2-.9 2-2v-7c0-4.97-4.03-9-9-9zm-5.5 8c-.83 0-1.5-.67-1.5-1.5S5.67 8 6.5 8s1.5.67 1.5 1.5S7.33 11 6.5 11zm3-4C8.67 7 8 6.33 8 5.5S8.67 4 9.5 4s1.5.67 1.5 1.5S10.33 7 9.5 7zm5 0c-.83 0-1.5-.67-1.5-1.5S13.67 4 14.5 4s1.5.67 1.5 1.5S15.33 7 14.5 7zm3 4c-.83 0-1.5-.67-1.5-1.5S16.67 8 17.5 8s1.5.67 1.5 1.5-.67 1.5-1.5 1.5z"/></svg>
-                        <span>Design & Graphisme</span>
+                        <span x-text="t('cat_design')">Design & Graphisme</span>
                     </a>
                     <a href="{{ url('/talents') }}" class="flex items-center gap-1.5 px-3 py-1 text-neutral-600 dark:text-neutral-400 hover:text-black dark:hover:text-white pb-2.5 border-b-2 border-transparent">
                         <svg class="w-3.5 h-3.5 fill-current" viewBox="0 0 24 24"><path d="M16 6l2.29 2.29-4.88 4.88-4-4L2 16.59 3.41 18l6-6 4 4 6.3-6.29L22 12V6z"/></svg>
-                        <span>Marketing digital</span>
+                        <span x-text="t('cat_marketing')">Marketing digital</span>
                     </a>
                     <a href="{{ url('/talents') }}" class="flex items-center gap-1.5 px-3 py-1 text-neutral-600 dark:text-neutral-400 hover:text-black dark:hover:text-white pb-2.5 border-b-2 border-transparent">
                         <svg class="w-3.5 h-3.5 fill-current" viewBox="0 0 24 24"><path d="M17 10.5V7c0-.55-.45-1-1-1H4c-.55 0-1 .45-1 1v10c0 .55.45 1 1 1h12c.55 0 1-.45 1-1v-3.5l4 4v-11l-4 4z"/></svg>
-                        <span>Audiovisuel</span>
+                        <span x-text="t('cat_media')">Audiovisuel</span>
                     </a>
                     <!-- Catégorie active : Site & Développement -->
                     <a href="{{ url('/talents') }}" class="flex items-center gap-1.5 px-3 py-1 border-b-2 border-black dark:border-[#FFB515] text-black dark:text-white font-extrabold pb-2.5 -mb-[1px]">
                         <svg class="w-3.5 h-3.5 fill-current text-[#FFB515]" viewBox="0 0 24 24"><path d="M9.4 16.6L4.8 12l4.6-4.6L8 6l-6 6 6 6 1.4-1.4zm5.2 0l4.6-4.6-4.6-4.6L16 6l6 6-6 6-1.4-1.4z"/></svg>
-                        <span>Site & Développement</span>
+                        <span x-text="t('cat_dev')">Site & Développement</span>
                     </a>
                     <a href="{{ url('/talents') }}" class="flex items-center gap-1.5 px-3 py-1 text-neutral-600 dark:text-neutral-400 hover:text-black dark:hover:text-white pb-2.5 border-b-2 border-transparent">
                         <svg class="w-3.5 h-3.5 fill-current" viewBox="0 0 24 24"><path d="M3 17.25V21h3.75L17.81 9.94l-3.75-3.75L3 17.25zM20.71 7.04c.39-.39.39-1.02 0-1.41l-2.34-2.34c-.39-.39-1.02-.39-1.41 0l-1.83 1.83 3.75 3.75 1.83-1.83z"/></svg>
-                        <span>Rédaction</span>
+                        <span x-text="t('cat_writing')">Rédaction</span>
                     </a>
                     <a href="{{ url('/talents') }}" class="flex items-center gap-1.5 px-3 py-1 text-neutral-600 dark:text-neutral-400 hover:text-black dark:hover:text-white pb-2.5 border-b-2 border-transparent">
                         <svg class="w-3.5 h-3.5 fill-current" viewBox="0 0 24 24"><path d="M18 16.08c-.76 0-1.44.3-1.96.77L8.91 12.7c.05-.23.09-.46.09-.7s-.04-.47-.09-.7l7.05-4.11c.54.5 1.25.81 2.04.81 1.66 0 3-1.34 3-3s-1.34-3-3-3-3 1.34-3 3c0 .24.04.47.09.7L8.04 9.81C7.5 9.31 6.79 9 6 9c-1.66 0-3 1.34-3 3s1.34 3 3 3c.79 0 1.5-.31 2.04-.81l7.12 4.16c-.05.21-.08.43-.08.65 0 1.61 1.31 2.92 2.92 2.92 1.61 0 2.92-1.31 2.92-2.92s-1.31-2.92-2.92-2.92z"/></svg>
-                        <span>Réseaux sociaux</span>
+                        <span x-text="t('cat_social')">Réseaux sociaux</span>
                     </a>
                     <a href="{{ url('/talents') }}" class="flex items-center gap-1.5 px-3 py-1 text-neutral-600 dark:text-neutral-400 hover:text-black dark:hover:text-white pb-2.5 border-b-2 border-transparent">
                         <svg class="w-3.5 h-3.5 fill-current" viewBox="0 0 24 24"><path d="M20 6h-4V4c0-1.11-.89-2-2-2h-4c-1.11 0-2 .89-2 2v2H4c-1.11 0-1.99.89-1.99 2L2 19c0 1.11.89 2 2 2h16c1.11 0 2-.89 2-2V8c0-1.1-.9-2-2-2zm-6 0h-4V4h4v2z"/></svg>
-                        <span>Business</span>
+                        <span x-text="t('cat_business')">Business</span>
                     </a>
                 </div>
 
@@ -958,7 +1317,7 @@
 
                                 <!-- Badge catégorie supérieur droit -->
                                 <div class="absolute top-4 right-4">
-                                    <span class="px-3 py-1 bg-black/90 text-white text-[11px] font-bold border border-white/10">
+                                    <span class="px-3 py-1 bg-black/90 text-white text-[11px] font-bold border border-white/10" x-text="getCategoryName('{{ $service['category'] }}')">
                                         {{ $service['category'] }}
                                     </span>
                                 </div>
@@ -989,10 +1348,10 @@
                             <div class="p-6 sm:p-7 bg-white dark:bg-[#121212] border border-neutral-200 dark:border-neutral-800 rounded-none space-y-5 shadow-xs text-left">
                                 <div class="flex flex-wrap items-center gap-2 border-b border-neutral-200 dark:border-neutral-800 pb-3">
                                     <span class="inline-flex items-center gap-1.5 px-2.5 py-0.5 bg-black text-white dark:bg-[#FFB515] dark:text-black text-[10px] font-black uppercase tracking-wider">
-                                        <span>Détails de la prestation</span>
+                                        <span x-text="t('details_heading')">Détails de la prestation</span>
                                     </span>
                                     <span class="text-xs font-bold text-neutral-600 dark:text-neutral-400">
-                                        Catégorie : <strong>{{ $service['category'] }}</strong>
+                                        <span x-text="t('category_label')">Catégorie :</span> <strong x-text="getCategoryName('{{ $service['category'] }}')">{{ $service['category'] }}</strong>
                                     </span>
                                     @if(!empty($service['badge']))
                                     <span class="text-xs text-neutral-400">·</span>
@@ -1000,19 +1359,19 @@
                                         @if(!empty($service['is_certified']))
                                         <svg class="w-3.5 h-3.5 fill-current text-emerald-600" viewBox="0 0 24 24"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z"/></svg>
                                         @endif
-                                        <span>{{ $service['badge'] }}</span>
+                                        <span x-text="getBadgeText('{{ $service['badge'] }}')">{{ $service['badge'] }}</span>
                                     </span>
                                     @endif
                                     @if(!empty($service['level']))
                                     <span class="text-xs text-neutral-400">·</span>
                                     <span class="text-xs font-semibold text-neutral-700 dark:text-[#FFB515]">
-                                        Niveau : <strong>{{ ucfirst($service['level']) }}</strong>
+                                        <span x-text="t('level_label')">Niveau :</span> <strong>{{ ucfirst($service['level']) }}</strong>
                                     </span>
                                     @endif
                                     @if(!empty($service['delivery_time']))
                                     <span class="text-xs text-neutral-400">·</span>
                                     <span class="text-xs font-semibold text-neutral-700 dark:text-neutral-300">
-                                        Délai : <strong>{{ $service['delivery_time'] }}</strong>
+                                        <span x-text="t('delivery_label')">Délai :</span> <strong x-text="getDeliveryText('{{ $service['delivery_time'] }}')">{{ $service['delivery_time'] }}</strong>
                                     </span>
                                     @endif
                                 </div>
@@ -1022,7 +1381,7 @@
                                 <div class="p-4 bg-neutral-50 dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-none space-y-1">
                                     <div class="flex items-center gap-2 text-xs font-black uppercase tracking-wider text-black dark:text-[#FFB515]">
                                         <svg class="w-3.5 h-3.5 fill-current" viewBox="0 0 24 24"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 18c-4.42 0-8-3.58-8-8s3.58-8 8-8 8 3.58 8 8-3.58 8-8 8zm0-14c-3.31 0-6 2.69-6 6s2.69 6 6 6 6-2.69 6-6-2.69-6-6-6zm0 10c-2.21 0-4-1.79-4-4s1.79-4 4-4 4 1.79 4 4-1.79 4-4 4z"/></svg>
-                                        <span>Problème auquel répond cette prestation :</span>
+                                        <span x-text="t('problem_solved_label')">Problème auquel répond cette prestation :</span>
                                     </div>
                                     <p class="text-xs sm:text-sm text-neutral-800 dark:text-neutral-200 leading-relaxed font-medium">
                                         {{ $service['problem_solved'] }}
@@ -1035,7 +1394,7 @@
                                 <div class="p-4 bg-neutral-50 dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-none space-y-1">
                                     <div class="flex items-center gap-2 text-xs font-black uppercase tracking-wider text-neutral-800 dark:text-neutral-300">
                                         <svg class="w-3.5 h-3.5 fill-current text-black dark:text-[#FFB515]" viewBox="0 0 24 24"><path d="M16 11c1.66 0 2.99-1.34 2.99-3S17.66 5 16 5s-3 1.34-3 3 1.34 3 3 3zm-8 0c1.66 0 2.99-1.34 2.99-3S9.66 5 8 5 5 6.34 5 8s1.34 3 3 3zm0 2c-2.33 0-7 1.17-7 3.5V19h14v-2.5c0-2.33-4.67-3.5-7-3.5zm8 0c-.29 0-.62.02-.97.05 1.16.84 1.97 1.97 1.97 3.45V19h6v-2.5c0-2.33-4.67-3.5-7-3.5z"/></svg>
-                                        <span>À qui s'adresse cette prestation :</span>
+                                        <span x-text="t('target_audience_label')">À qui s'adresse cette prestation :</span>
                                     </div>
                                     <p class="text-xs sm:text-sm text-neutral-800 dark:text-neutral-200 leading-relaxed font-medium">
                                         {{ $service['target_audience'] }}
@@ -1044,14 +1403,14 @@
                                 @endif
 
                                 <div class="space-y-2">
-                                    <h3 class="text-base sm:text-lg font-black text-black dark:text-white leading-snug">
+                                    <h3 class="text-base sm:text-lg font-black text-black dark:text-white leading-snug" x-text="t('what_talent_offers')">
                                         Ce que propose concrètement le talent
                                     </h3>
                                     <div class="text-xs sm:text-sm text-neutral-700 dark:text-neutral-300 leading-relaxed font-normal whitespace-pre-line">
                                         @if(!empty($service['description']))
 {{ $service['description'] }}
                                         @else
-                                            <span class="italic text-neutral-500">Aucune description détaillée supplémentaire n'a été renseignée pour cette prestation. Vous pouvez contacter le talent pour préciser votre besoin.</span>
+                                            <span class="italic text-neutral-500" x-text="t('no_desc')">Aucune description détaillée supplémentaire n'a été renseignée pour cette prestation. Vous pouvez contacter le talent pour préciser votre besoin.</span>
                                         @endif
                                     </div>
                                 </div>
@@ -1061,7 +1420,7 @@
                                 <div class="p-4 bg-neutral-50 dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-none space-y-1">
                                     <div class="flex items-center gap-2 text-xs font-black uppercase tracking-wider text-black dark:text-neutral-200">
                                         <svg class="w-3.5 h-3.5 fill-current text-black dark:text-[#FFB515]" viewBox="0 0 24 24"><path d="M19 3h-4.18C14.4 1.84 13.3 1 12 1s-2.4.84-2.82 2H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm-7 0c.55 0 1 .45 1 1s-.45 1-1 1-1-.45-1-1 .45-1 1-1zm7 16H5V5h2v3h10V5h2v14z"/></svg>
-                                        <span>Informations et ressources à fournir par le client :</span>
+                                        <span x-text="t('prerequisites_label')">Informations et ressources à fournir par le client :</span>
                                     </div>
                                     <p class="text-xs sm:text-sm text-neutral-800 dark:text-neutral-200 leading-relaxed font-normal whitespace-pre-line">
                                         {{ $service['prerequisites'] }}
@@ -1074,7 +1433,7 @@
                                 <div class="p-4 bg-neutral-50 dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-none space-y-1">
                                     <div class="flex items-center gap-2 text-xs font-black uppercase tracking-wider text-neutral-900 dark:text-neutral-200">
                                         <svg class="w-3.5 h-3.5 fill-current text-black dark:text-[#FFB515]" viewBox="0 0 24 24"><path d="M1 21h22L12 2 1 21zm12-3h-2v-2h2v2zm0-4h-2v-4h2v4z"/></svg>
-                                        <span>Limites et exclusions de la prestation :</span>
+                                        <span x-text="t('exclusions_label')">Limites et exclusions de la prestation :</span>
                                     </div>
                                     <p class="text-xs sm:text-sm text-neutral-800 dark:text-neutral-200 leading-relaxed font-normal whitespace-pre-line">
                                         {{ $service['exclusions'] }}
@@ -1094,9 +1453,9 @@
                                 <div class="flex items-center justify-between border-b border-gray-200 dark:border-neutral-800 pb-2">
                                     <h3 class="text-base sm:text-lg font-extrabold text-black dark:text-white flex items-center gap-2">
                                         <svg class="w-4 h-4 fill-current text-black dark:text-[#FFB515]" viewBox="0 0 24 24"><path d="M20 6h-4V4c0-1.11-.89-2-2-2h-4c-1.11 0-2 .89-2 2v2H4c-1.11 0-1.99.89-1.99 2L2 19c0 1.11.89 2 2 2h16c1.11 0 2-.89 2-2V8c0-1.1-.9-2-2-2zm-6 0h-4V4h4v2z"/></svg>
-                                        <span>Réalisations & Portfolio du talent</span>
+                                        <span x-text="t('portfolio_title')">Réalisations & Portfolio du talent</span>
                                     </h3>
-                                    <span class="text-[11px] font-bold text-neutral-500">Contenu vérifié</span>
+                                    <span class="text-[11px] font-bold text-neutral-500" x-text="t('verified_content')">Contenu vérifié</span>
                                 </div>
 
                                 <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
@@ -1104,7 +1463,7 @@
                                     <div class="p-4 bg-white dark:bg-[#121212] border border-neutral-200 dark:border-neutral-800 space-y-2">
                                         <div class="flex items-center justify-between">
                                             <strong class="text-xs font-bold text-black dark:text-white">{{ $cand->realization_title ?? 'Réalisation principale' }}</strong>
-                                            <span class="px-1.5 py-0.5 bg-neutral-100 dark:bg-neutral-800 text-[9px] font-bold uppercase">Projet clé</span>
+                                            <span class="px-1.5 py-0.5 bg-neutral-100 dark:bg-neutral-800 text-[9px] font-bold uppercase" x-text="t('key_project')">Projet clé</span>
                                         </div>
                                         @if(!empty($cand->realization_description))
                                         <p class="text-[11px] text-neutral-600 dark:text-neutral-400 leading-relaxed">{{ $cand->realization_description }}</p>
@@ -1112,13 +1471,13 @@
                                         <div class="pt-2 flex items-center gap-3">
                                             @if(!empty($cand->realization_link))
                                             <a href="{{ $cand->realization_link }}" target="_blank" rel="noopener noreferrer" class="text-xs font-bold text-black dark:text-[#FFB515] hover:underline flex items-center gap-1">
-                                                <span>Voir le projet en ligne</span>
+                                                <span x-text="t('view_online')">Voir le projet en ligne</span>
                                                 <span>↗</span>
                                             </a>
                                             @endif
                                             @if(!empty($cand->realization_file))
                                             <a href="{{ asset('storage/' . $cand->realization_file) }}" target="_blank" rel="noopener noreferrer" class="text-xs font-bold text-neutral-700 dark:text-neutral-300 hover:underline flex items-center gap-1">
-                                                <span>Consulter le fichier</span>
+                                                <span x-text="t('consult_file')">Consulter le fichier</span>
                                                 <svg class="w-3 h-3 fill-current" viewBox="0 0 24 24"><path d="M16.5 6v11.5c0 2.21-1.79 4-4 4s-4-1.79-4-4V5c0-1.38 1.12-2.5 2.5-2.5s2.5 1.12 2.5 2.5v10.5c0 .55-.45 1-1 1s-1-.45-1-1V6H10v9.5c0 1.38 1.12 2.5 2.5 2.5s2.5-1.12 2.5-2.5V5c0-2.21-1.79-4-4-4S7 2.79 7 5v12.5c0 3.04 2.46 5.5 5.5 5.5s5.5-2.46 5.5-5.5V6h-1.5z"/></svg>
                                             </a>
                                             @endif
@@ -1131,7 +1490,7 @@
                                         <div class="p-4 bg-white dark:bg-[#121212] border border-neutral-200 dark:border-neutral-800 space-y-2">
                                             <div class="flex items-center justify-between">
                                                 <strong class="text-xs font-bold text-black dark:text-white">{{ $content->title }}</strong>
-                                                <span class="px-1.5 py-0.5 bg-neutral-100 dark:bg-neutral-800 text-black dark:text-white text-[9px] font-bold uppercase">Publié</span>
+                                                <span class="px-1.5 py-0.5 bg-neutral-100 dark:bg-neutral-800 text-black dark:text-white text-[9px] font-bold uppercase" x-text="t('published')">Publié</span>
                                             </div>
                                             @if(!empty($content->description))
                                             <p class="text-[11px] text-neutral-600 dark:text-neutral-400 leading-relaxed">{{ $content->description }}</p>
@@ -1139,7 +1498,7 @@
                                             @if(!empty($content->file_or_url))
                                             <div class="pt-2">
                                                 <a href="{{ str_starts_with($content->file_or_url, 'http') ? $content->file_or_url : asset('storage/' . $content->file_or_url) }}" target="_blank" rel="noopener noreferrer" class="text-xs font-bold text-black dark:text-[#FFB515] hover:underline flex items-center gap-1">
-                                                    <span>Consulter la réalisation</span>
+                                                    <span x-text="t('consult_realization')">Consulter la réalisation</span>
                                                     <span>↗</span>
                                                 </a>
                                             </div>
@@ -1156,7 +1515,7 @@
                             <div class="space-y-3 pt-2">
                                 <h3 class="text-sm sm:text-base font-extrabold text-black dark:text-white flex items-center gap-2">
                                     <svg class="w-4 h-4 fill-current text-[#FFB515]" viewBox="0 0 24 24"><path d="M12 17.27L18.18 21l-1.64-7.03L22 9.24l-7.19-.61L12 2 9.19 8.63 2 9.24l5.46 4.73L5.82 21z"/></svg>
-                                    <span>Autres compétences de {{ $service['author'] }} :</span>
+                                    <span x-text="t('other_skills_prefix') + ' ' + '{{ $service['author'] }} :'">Autres compétences de {{ $service['author'] }} :</span>
                                 </h3>
                                 <div class="flex flex-wrap gap-2">
                                     @foreach($otherCompetencies as $otherComp)
@@ -1181,7 +1540,7 @@
                         <div class="p-6 sm:p-7 rounded-none bg-neutral-50 dark:bg-[#121212] border border-neutral-200 dark:border-neutral-800 space-y-4">
                             <h3 class="text-base sm:text-lg font-extrabold text-black dark:text-white flex items-center gap-2">
                                 <svg class="w-4 h-4 fill-current text-black dark:text-[#FFB515]" viewBox="0 0 24 24"><path d="M20 2H4c-1.1 0-2 .9-2 2v16c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2zm-1 18H5V5h14v15z"/></svg>
-                                <span>Livrables prévus :</span>
+                                <span x-text="t('deliverables_title')">Livrables prévus :</span>
                             </h3>
                             <div class="space-y-3">
                                 @foreach($service['deliverables'] as $deliv)
@@ -1201,7 +1560,7 @@
                         @if(!empty($service['steps']) && count($service['steps']) > 0)
                         <!-- ÉTAPES DU PROJET (si renseignées) -->
                         <div class="space-y-4">
-                            <h3 class="text-base sm:text-lg font-extrabold text-black dark:text-white border-b border-gray-200 dark:border-neutral-800 pb-2.5">
+                            <h3 class="text-base sm:text-lg font-extrabold text-black dark:text-white border-b border-gray-200 dark:border-neutral-800 pb-2.5" x-text="t('mission_process_title')">
                                 Déroulement de la mission
                             </h3>
                             <div class="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
@@ -1224,7 +1583,7 @@
 
                         <!-- FICHE ÉPURÉE : À PROPOS DU PRESTATAIRE -->
                         <div class="p-5 sm:p-6 bg-white dark:bg-[#121212] border border-neutral-200 dark:border-neutral-800 rounded-none space-y-4 text-left">
-                            <h3 class="text-base sm:text-lg font-extrabold text-black dark:text-white">
+                            <h3 class="text-base sm:text-lg font-extrabold text-black dark:text-white" x-text="t('about_provider')">
                                 À propos du prestataire
                             </h3>
 
@@ -1245,13 +1604,13 @@
                                             <span class="font-bold text-neutral-800 dark:text-neutral-200">{{ $service['author_role'] }}</span>
                                             <span class="text-neutral-400">·</span>
                                             @endif
-                                            <span class="px-1.5 py-0.5 bg-black text-white dark:bg-white dark:text-black font-bold text-[10px]">Professionnel</span>
+                                            <span class="px-1.5 py-0.5 bg-black text-white dark:bg-white dark:text-black font-bold text-[10px]" x-text="t('pro_badge')">Professionnel</span>
                                             @if(!empty($cand->city))
                                             <span class="text-neutral-400">·</span>
                                             <span class="text-neutral-500 dark:text-neutral-400">{{ $cand->city }}</span>
                                             @endif
                                             <span class="text-neutral-400">·</span>
-                                            <span class="text-emerald-700 dark:text-emerald-400 font-semibold">● Disponible</span>
+                                            <span class="text-emerald-700 dark:text-emerald-400 font-semibold" x-text="t('available_badge')">● Disponible</span>
                                         </div>
                                     </div>
                                 </div>
@@ -1261,7 +1620,7 @@
                                     @click="openOrder()" 
                                     class="h-9 px-4 border border-neutral-300 dark:border-neutral-700 hover:border-black dark:hover:border-white bg-white dark:bg-neutral-900 text-neutral-800 dark:text-neutral-200 font-bold text-xs inline-flex items-center justify-center gap-1.5 transition-all cursor-pointer flex-shrink-0"
                                 >
-                                    <span>Contacter le talent</span>
+                                    <span x-text="t('contact_talent')">Contacter le talent</span>
                                 </button>
                             </div>
 
@@ -1275,7 +1634,7 @@
                         <div class="space-y-4 pt-2">
                             <h3 class="text-base sm:text-lg font-extrabold text-black dark:text-white flex items-center gap-2">
                                 <svg class="w-4 h-4 fill-current text-black dark:text-[#FFB515]" viewBox="0 0 24 24"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 16h-2v-2h2v2zm1.07-7.75l-.9.92C12.45 11.9 12 12.5 12 14h-2v-.5c0-1.1.45-2.1 1.17-2.83l1.24-1.26c.37-.36.59-.86.59-1.41 0-1.1-.9-2-2-2s-2 .9-2 2H7c0-2.76 2.24-5 5-5s5 2.24 5 5c0 1.04-.42 1.99-1.07 2.75z"/></svg>
-                                <span>Questions fréquentes concernant cette prestation :</span>
+                                <span x-text="t('faq_title')">Questions fréquentes concernant cette prestation :</span>
                             </h3>
 
                             <div class="space-y-2.5">
@@ -1314,7 +1673,7 @@
                             
                             <div class="space-y-3">
                                 <div>
-                                    <span class="text-xs uppercase font-extrabold tracking-wider text-neutral-400 block">Tarif indicatif</span>
+                                    <span class="text-xs uppercase font-extrabold tracking-wider text-neutral-400 block" x-text="t('indicative_rate')">Tarif indicatif</span>
                                     <div class="text-2xl sm:text-3xl font-black text-black dark:text-white mt-1">
                                         {{ $service['price'] }}
                                     </div>
@@ -1323,17 +1682,17 @@
                                 <!-- Délai de réalisation annoncé -->
                                 <div class="flex items-center justify-between text-xs pt-1 border-b border-neutral-200/80 dark:border-neutral-800 pb-3">
                                     <span class="text-neutral-500 flex items-center gap-1.5">
-                                        <svg class="w-3.5 h-3.5 fill-current text-[#FFB515]" viewBox="0 0 24 24"><path d="M19 4h-1V2h-2v2H8V2H6v2H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V6c0-1.1-.9-2-2-2zm0 16H5V9h14v11zM7 11h2v2H7v-2zm4 0h2v2h-2v-2zm4 0h2v2h-2v-2z"/></svg>
-                                        <span>Délai annoncé :</span>
+                                        <svg class="w-3.5 h-3.5 fill-current text-[#FFB515]" viewBox="0 0 24 24"><path d="M19 4h-1V2h-2v2H8V2H6v2H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V6c0-1.1-.9-2-2-2zm0 16H5V9h14v11zM7 11h2v2H7v-2zm4 0h2v2h-2v-2zm4 0h2v2h-2v-2z"/></svg>
+                                        <span x-text="t('announced_delivery')">Délai annoncé :</span>
                                     </span>
-                                    <strong class="text-black dark:text-white font-extrabold">
+                                    <strong class="text-black dark:text-white font-extrabold" x-text="getDeliveryText('{{ $service['delivery_time'] ?? 'Sur cadrage' }}')">
                                         {{ $service['delivery_time'] ?? 'Sur cadrage' }}
                                     </strong>
                                 </div>
 
                                 <!-- Récapitulatif prestation -->
                                 <div class="text-[11px] text-neutral-600 dark:text-neutral-400 space-y-1">
-                                    <span class="font-bold text-black dark:text-white block">Prestation sélectionnée :</span>
+                                    <span class="font-bold text-black dark:text-white block" x-text="t('selected_service')">Prestation sélectionnée :</span>
                                     <div class="flex items-center gap-1 text-neutral-700 dark:text-neutral-300">
                                         <span>•</span>
                                         <span>{{ $service['title'] }}</span>
@@ -1348,7 +1707,7 @@
                                     @click="openOrder()"
                                     class="w-full h-12 bg-black hover:bg-neutral-800 active:bg-neutral-900 text-white dark:bg-white dark:text-black font-extrabold text-xs uppercase tracking-wider flex items-center justify-center gap-2 transition-all cursor-pointer shadow-xs"
                                 >
-                                    <span>Commander cette prestation</span>
+                                    <span x-text="t('order_button')">Commander cette prestation</span>
                                     <svg class="w-3.5 h-3.5 fill-current" viewBox="0 0 24 24"><path d="M12 4l-1.41 1.41L16.17 11H4v2h12.17l-5.58 5.59L12 20l8-8z"/></svg>
                                 </button>
                             </div>
@@ -1357,25 +1716,23 @@
                             <div class="border-t border-neutral-100 dark:border-neutral-800 pt-5 space-y-2.5 text-xs text-neutral-800 dark:text-neutral-200">
                                 <div class="flex items-center gap-2">
                                     <span class="w-4 h-4 bg-[#FFB515] text-black font-black text-[10px] flex items-center justify-center">✓</span>
-                                    <span>Échanges directs avec le talent</span>
+                                    <span x-text="t('trust_direct_exchange')">Échanges directs avec le talent</span>
                                 </div>
                                 <div class="flex items-center gap-2">
                                     <span class="w-4 h-4 bg-[#FFB515] text-black font-black text-[10px] flex items-center justify-center">✓</span>
-                                    <span>Accompagnement et cadre Talent Club</span>
+                                    <span x-text="t('trust_talent_club')">Accompagnement et cadre Talent Club</span>
                                 </div>
                                 <div class="flex items-center gap-2">
                                     <span class="w-4 h-4 bg-[#FFB515] text-black font-black text-[10px] flex items-center justify-center">✓</span>
-                                    <span>Respect strict de la confidentialité</span>
+                                    <span x-text="t('trust_confidentiality')">Respect strict de la confidentialité</span>
                                 </div>
                                 <div class="flex items-center gap-2">
                                     <span class="w-4 h-4 bg-[#FFB515] text-black font-black text-[10px] flex items-center justify-center">✓</span>
-                                    <span>Validation avant clôture de la mission</span>
+                                    <span x-text="t('trust_validation')">Validation avant clôture de la mission</span>
                                 </div>
                             </div>
 
                         </div>
-
-
 
                     </div>
 
@@ -1433,11 +1790,11 @@
                     </button>
 
                     <div class="text-xs font-semibold text-slate-500 dark:text-neutral-400">
-                        Étape <span class="font-bold text-slate-900 dark:text-white" x-text="orderStep"></span> sur 4
+                        <span x-text="t('step')">Étape</span> <span class="font-bold text-slate-900 dark:text-white" x-text="orderStep"></span> <span x-text="t('of_steps')">sur 4</span>
                     </div>
 
                     <button 
-                        type="button"
+                        type="button" 
                         @click="orderModalOpen = false"
                         class="w-9 h-9 rounded-full flex items-center justify-center text-slate-800 dark:text-neutral-200 hover:bg-slate-100 dark:hover:bg-neutral-800 transition cursor-pointer"
                         title="Fermer"
@@ -1464,7 +1821,7 @@
                     <!-- Récapitulatif prestation sélectionnée -->
                     <div class="p-3 bg-slate-50 dark:bg-neutral-900/80 rounded-xl border border-slate-200/80 dark:border-neutral-800 flex items-center justify-between text-xs">
                         <div class="pr-2">
-                            <span class="text-[10px] uppercase font-bold tracking-wider text-black dark:text-[#FFB515] block">Prestation ciblée</span>
+                            <span class="text-[10px] uppercase font-bold tracking-wider text-black dark:text-[#FFB515] block" x-text="t('target_service')">Prestation ciblée</span>
                             <strong class="text-slate-900 dark:text-white block text-sm">{{ $service['title'] }}</strong>
                             <span class="text-slate-500 dark:text-neutral-400">Par {{ $service['author'] }} · {{ $service['delivery_time'] ?? 'Délai à convenir' }}</span>
                         </div>
@@ -1505,18 +1862,21 @@
                         <!-- ========================================== -->
                         <div x-show="orderStep === 1" x-cloak class="space-y-4">
                             <div>
-                                <h4 class="text-base font-bold text-slate-900 dark:text-white">Vos coordonnées de contact</h4>
-                                <p class="text-xs text-slate-500 dark:text-neutral-400">Coordonnées strictement privées, nécessaires au suivi de votre demande.</p>
+                                <h4 class="text-base font-bold text-slate-900 dark:text-white" x-text="t('step1_title')">Vos coordonnées de contact</h4>
+                                <p class="text-xs text-slate-500 dark:text-neutral-400" x-text="t('step1_sub')">Coordonnées strictement privées, nécessaires au suivi de votre demande.</p>
                             </div>
 
                             <div class="space-y-3">
                                 <div>
-                                    <label class="block text-xs font-semibold text-slate-700 dark:text-neutral-300 mb-1">Votre Nom complet <span class="text-red-500">*</span></label>
+                                    <label class="block text-xs font-semibold text-slate-700 dark:text-neutral-300 mb-1">
+                                        <span x-text="t('full_name')">Votre Nom complet</span> <span class="text-red-500">*</span>
+                                    </label>
                                     <input 
                                         type="text" 
                                         name="client_name"
                                         x-model="clientName"
                                         required 
+                                        :placeholder="t('full_name_ph')"
                                         placeholder="Ex: Sophie Martin ou Mohamed Koné" 
                                         class="w-full h-11 px-3.5 text-xs bg-slate-50 dark:bg-neutral-900 border border-slate-200 dark:border-neutral-700 rounded-xl text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-2 focus:ring-[#FFB515] focus:border-black focus:bg-white dark:focus:bg-neutral-900 transition"
                                     />
@@ -1526,18 +1886,23 @@
                                 </div>
 
                                 <div>
-                                    <label class="block text-xs font-semibold text-slate-700 dark:text-neutral-300 mb-1">Entreprise ou organisation <span class="text-slate-400 text-[11px] font-normal">(facultatif)</span></label>
+                                    <label class="block text-xs font-semibold text-slate-700 dark:text-neutral-300 mb-1">
+                                        <span x-text="t('company_label')">Entreprise ou organisation</span> <span class="text-slate-400 text-[11px] font-normal" x-text="t('optional')">(facultatif)</span>
+                                    </label>
                                     <input 
                                         type="text" 
                                         name="client_company"
                                         x-model="clientCompany"
+                                        :placeholder="t('company_ph')"
                                         placeholder="Ex: Société SARL, Startup, Projet personnel" 
                                         class="w-full h-11 px-3.5 text-xs bg-slate-50 dark:bg-neutral-900 border border-slate-200 dark:border-neutral-700 rounded-xl text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-2 focus:ring-[#FFB515] focus:border-black focus:bg-white dark:focus:bg-neutral-900 transition"
                                     />
                                 </div>
 
                                 <div>
-                                    <label class="block text-xs font-semibold text-slate-700 dark:text-neutral-300 mb-1">Adresse e-mail professionnelle <span class="text-red-500">*</span></label>
+                                    <label class="block text-xs font-semibold text-slate-700 dark:text-neutral-300 mb-1">
+                                        <span x-text="t('email_label')">Adresse e-mail professionnelle</span> <span class="text-red-500">*</span>
+                                    </label>
                                     <input 
                                         type="email" 
                                         name="client_email"
@@ -1546,14 +1911,16 @@
                                         placeholder="contact@exemple.com" 
                                         class="w-full h-11 px-3.5 text-xs bg-slate-50 dark:bg-neutral-900 border border-slate-200 dark:border-neutral-700 rounded-xl text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-2 focus:ring-[#FFB515] focus:border-black focus:bg-white dark:focus:bg-neutral-900 transition"
                                     />
-                                    <p class="text-[10px] text-slate-400 dark:text-neutral-500 mt-1">L'e-mail de confirmation et le suivi y seront envoyés.</p>
+                                    <p class="text-[10px] text-slate-400 dark:text-neutral-500 mt-1" x-text="t('email_sub')">L'e-mail de confirmation et le suivi y seront envoyés.</p>
                                     @error('client_email')
                                         <p class="text-red-500 text-[11px] mt-0.5">{{ $message }}</p>
                                     @enderror
                                 </div>
 
                                 <div>
-                                    <label class="block text-xs font-semibold text-slate-700 dark:text-neutral-300 mb-1">Téléphone ou WhatsApp <span class="text-red-500">*</span></label>
+                                    <label class="block text-xs font-semibold text-slate-700 dark:text-neutral-300 mb-1">
+                                        <span x-text="t('phone_label')">Téléphone ou WhatsApp</span> <span class="text-red-500">*</span>
+                                    </label>
                                     <input 
                                         type="tel" 
                                         name="client_phone"
@@ -1574,18 +1941,21 @@
                         <!-- ========================================== -->
                         <div x-show="orderStep === 2" x-cloak class="space-y-4">
                             <div>
-                                <h4 class="text-base font-bold text-slate-900 dark:text-white">Votre projet et vos attentes</h4>
-                                <p class="text-xs text-slate-500 dark:text-neutral-400">Précisez vos objectifs pour permettre au talent d'étudier la faisabilité.</p>
+                                <h4 class="text-base font-bold text-slate-900 dark:text-white" x-text="t('step2_title')">Votre projet et vos attentes</h4>
+                                <p class="text-xs text-slate-500 dark:text-neutral-400" x-text="t('step2_sub')">Précisez vos objectifs pour permettre au talent d'étudier la faisabilité.</p>
                             </div>
 
                             <div class="space-y-3">
                                 <div>
-                                    <label class="block text-xs font-semibold text-slate-700 dark:text-neutral-300 mb-1">Objet ou titre du projet <span class="text-red-500">*</span></label>
+                                    <label class="block text-xs font-semibold text-slate-700 dark:text-neutral-300 mb-1">
+                                        <span x-text="t('project_title_label')">Objet ou titre du projet</span> <span class="text-red-500">*</span>
+                                    </label>
                                     <input 
                                         type="text" 
                                         name="title"
                                         x-model="projectTitle"
                                         required
+                                        :placeholder="t('project_title_ph')"
                                         placeholder="Ex: Refonte de notre site internet vitrine" 
                                         class="w-full h-11 px-3.5 text-xs bg-slate-50 dark:bg-neutral-900 border border-slate-200 dark:border-neutral-700 rounded-xl text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-2 focus:ring-[#FFB515] focus:border-black focus:bg-white dark:focus:bg-neutral-900 transition"
                                     />
@@ -1595,12 +1965,15 @@
                                 </div>
 
                                 <div>
-                                    <label class="block text-xs font-semibold text-slate-700 dark:text-neutral-300 mb-1">Décrivez précisément votre besoin <span class="text-red-500">*</span></label>
+                                    <label class="block text-xs font-semibold text-slate-700 dark:text-neutral-300 mb-1">
+                                        <span x-text="t('need_desc_label')">Décrivez précisément votre besoin</span> <span class="text-red-500">*</span>
+                                    </label>
                                     <textarea 
                                         rows="3" 
                                         name="need_description"
                                         x-model="needDescription"
                                         required 
+                                        :placeholder="t('need_desc_ph')"
                                         placeholder="Quel problème souhaitez-vous résoudre ou quel objectif atteindre ?"
                                         class="w-full p-3 text-xs bg-slate-50 dark:bg-neutral-900 border border-slate-200 dark:border-neutral-700 rounded-xl text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-2 focus:ring-[#FFB515] focus:border-black focus:bg-white dark:focus:bg-neutral-900 transition"
                                     ></textarea>
@@ -1610,11 +1983,14 @@
                                 </div>
 
                                 <div>
-                                    <label class="block text-xs font-semibold text-slate-700 dark:text-neutral-300 mb-1">Résultat ou livrable attendu <span class="text-slate-400 text-[11px] font-normal">(format, quantité, caractéristiques)</span></label>
+                                    <label class="block text-xs font-semibold text-slate-700 dark:text-neutral-300 mb-1">
+                                        <span x-text="t('deliverable_label')">Résultat ou livrable attendu</span> <span class="text-slate-400 text-[11px] font-normal" x-text="t('deliverable_sub')">(format, quantité, caractéristiques)</span>
+                                    </label>
                                     <input 
                                         type="text" 
                                         name="expected_deliverable"
                                         x-model="expectedDeliverable"
+                                        :placeholder="t('deliverable_ph')"
                                         placeholder="Ex: 5 pages web WordPress responsives, fichier Figma éditable..." 
                                         class="w-full h-11 px-3.5 text-xs bg-slate-50 dark:bg-neutral-900 border border-slate-200 dark:border-neutral-700 rounded-xl text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-2 focus:ring-[#FFB515] focus:border-black focus:bg-white dark:focus:bg-neutral-900 transition"
                                     />
@@ -1622,21 +1998,27 @@
 
                                 <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
                                     <div>
-                                        <label class="block text-xs font-semibold text-slate-700 dark:text-neutral-300 mb-1">Budget prévu <span class="text-slate-400 text-[11px] font-normal">(facultatif)</span></label>
+                                        <label class="block text-xs font-semibold text-slate-700 dark:text-neutral-300 mb-1">
+                                            <span x-text="t('budget_label')">Budget prévu</span> <span class="text-slate-400 text-[11px] font-normal" x-text="t('optional')">(facultatif)</span>
+                                        </label>
                                         <input 
                                             type="text" 
                                             name="budget"
                                             x-model="budget"
+                                            :placeholder="t('budget_ph')"
                                             placeholder="Ex: 150 000 FCFA ou À discuter" 
                                             class="w-full h-11 px-3.5 text-xs bg-slate-50 dark:bg-neutral-900 border border-slate-200 dark:border-neutral-700 rounded-xl text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-2 focus:ring-[#FFB515] focus:border-black focus:bg-white dark:focus:bg-neutral-900 transition"
                                         />
                                     </div>
                                     <div>
-                                        <label class="block text-xs font-semibold text-slate-700 dark:text-neutral-300 mb-1">Date limite souhaitée <span class="text-slate-400 text-[11px] font-normal">(facultatif)</span></label>
+                                        <label class="block text-xs font-semibold text-slate-700 dark:text-neutral-300 mb-1">
+                                            <span x-text="t('deadline_label')">Date limite souhaitée</span> <span class="text-slate-400 text-[11px] font-normal" x-text="t('optional')">(facultatif)</span>
+                                        </label>
                                         <input 
                                             type="text" 
                                             name="deadline"
                                             x-model="deadline"
+                                            :placeholder="t('deadline_ph')"
                                             placeholder="Ex: Sous 2 semaines, Fin du mois" 
                                             class="w-full h-11 px-3.5 text-xs bg-slate-50 dark:bg-neutral-900 border border-slate-200 dark:border-neutral-700 rounded-xl text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-2 focus:ring-[#FFB515] focus:border-black focus:bg-white dark:focus:bg-neutral-900 transition"
                                         />
@@ -1650,13 +2032,13 @@
                         <!-- ======================================================== -->
                         <div x-show="orderStep === 3" x-cloak class="space-y-4">
                             <div>
-                                <h4 class="text-base font-bold text-slate-900 dark:text-white">Précisions, contraintes et références</h4>
-                                <p class="text-xs text-slate-500 dark:text-neutral-400">Ces informations facultatives permettent d'éviter les allers-retours.</p>
+                                <h4 class="text-base font-bold text-slate-900 dark:text-white" x-text="t('step3_title')">Précisions, contraintes et références</h4>
+                                <p class="text-xs text-slate-500 dark:text-neutral-400" x-text="t('step3_sub')">Ces informations facultatives permettent d'éviter les allers-retours.</p>
                             </div>
 
                             <div class="space-y-3">
                                 <div>
-                                    <label class="block text-xs font-semibold text-slate-700 dark:text-neutral-300 mb-1">À qui s'adresse le projet et dans quel contexte sera-t-il utilisé ?</label>
+                                    <label class="block text-xs font-semibold text-slate-700 dark:text-neutral-300 mb-1" x-text="t('target_audience_context_label')">À qui s'adresse le projet et dans quel contexte sera-t-il utilisé ?</label>
                                     <input 
                                         type="text" 
                                         name="target_audience_context"
@@ -1667,7 +2049,7 @@
                                 </div>
 
                                 <div>
-                                    <label class="block text-xs font-semibold text-slate-700 dark:text-neutral-300 mb-1">Quels éléments, contenus ou accès pouvez-vous fournir ?</label>
+                                    <label class="block text-xs font-semibold text-slate-700 dark:text-neutral-300 mb-1" x-text="t('provided_elements_label')">Quels éléments, contenus ou accès pouvez-vous fournir ?</label>
                                     <input 
                                         type="text" 
                                         name="provided_elements"
@@ -1679,7 +2061,7 @@
 
                                 <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
                                     <div>
-                                        <label class="block text-xs font-semibold text-slate-700 dark:text-neutral-300 mb-1">Contraintes ou éléments à éviter</label>
+                                        <label class="block text-xs font-semibold text-slate-700 dark:text-neutral-300 mb-1" x-text="t('constraints_label')">Contraintes ou éléments à éviter</label>
                                         <input 
                                             type="text" 
                                             name="constraints_to_avoid"
@@ -1689,7 +2071,7 @@
                                         />
                                     </div>
                                     <div>
-                                        <label class="block text-xs font-semibold text-slate-700 dark:text-neutral-300 mb-1">Priorités si tout ne peut être traité</label>
+                                        <label class="block text-xs font-semibold text-slate-700 dark:text-neutral-300 mb-1" x-text="t('priorities_label')">Priorités si tout ne peut être traité</label>
                                         <input 
                                             type="text" 
                                             name="priorities"
@@ -1702,7 +2084,7 @@
 
                                 <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
                                     <div>
-                                        <label class="block text-xs font-semibold text-slate-700 dark:text-neutral-300 mb-1">Comment saurez-vous que le résultat convient ?</label>
+                                        <label class="block text-xs font-semibold text-slate-700 dark:text-neutral-300 mb-1" x-text="t('success_criteria_label')">Comment saurez-vous que le résultat convient ?</label>
                                         <input 
                                             type="text" 
                                             name="success_criteria"
@@ -1712,7 +2094,7 @@
                                         />
                                     </div>
                                     <div>
-                                        <label class="block text-xs font-semibold text-slate-700 dark:text-neutral-300 mb-1">Qui validera le livrable final ?</label>
+                                        <label class="block text-xs font-semibold text-slate-700 dark:text-neutral-300 mb-1" x-text="t('validator_label')">Qui validera le livrable final ?</label>
                                         <input 
                                             type="text" 
                                             name="validator"
@@ -1724,7 +2106,9 @@
                                 </div>
 
                                 <div>
-                                    <label class="block text-xs font-semibold text-slate-700 dark:text-neutral-300 mb-1">Exemples ou références à partager <span class="text-slate-400 text-[11px] font-normal">(liens URL)</span></label>
+                                    <label class="block text-xs font-semibold text-slate-700 dark:text-neutral-300 mb-1">
+                                        <span x-text="t('reference_links_label')">Exemples ou références à partager</span> <span class="text-slate-400 text-[11px] font-normal">(liens URL)</span>
+                                    </label>
                                     <input 
                                         type="text" 
                                         name="reference_links"
@@ -1745,7 +2129,7 @@
 
                                 @if($isWeb || $isSeo || $isFashion || $isContent)
                                 <div class="p-3 bg-neutral-50 dark:bg-neutral-900 rounded-none border border-neutral-200 dark:border-neutral-800 space-y-2 text-xs">
-                                    <div class="font-bold text-black dark:text-[#FFB515] text-[11px] uppercase tracking-wider">
+                                    <div class="font-bold text-black dark:text-[#FFB515] text-[11px] uppercase tracking-wider" x-text="t('craft_questions_title')">
                                         Précisions recommandées pour ce domaine
                                     </div>
 
@@ -1780,7 +2164,9 @@
                                 @endif
 
                                 <div>
-                                    <label class="block text-xs font-semibold text-slate-700 dark:text-neutral-300 mb-1">Autre point important avant le démarrage <span class="text-slate-400 text-[11px] font-normal">(facultatif)</span></label>
+                                    <label class="block text-xs font-semibold text-slate-700 dark:text-neutral-300 mb-1">
+                                        <span x-text="t('additional_notes_label')">Autre point important avant le démarrage</span> <span class="text-slate-400 text-[11px] font-normal" x-text="t('optional')">(facultatif)</span>
+                                    </label>
                                     <textarea 
                                         rows="2" 
                                         name="additional_notes"
@@ -1797,49 +2183,49 @@
                         <!-- ========================================== -->
                         <div x-show="orderStep === 4" x-cloak class="space-y-4">
                             <div>
-                                <h4 class="text-base font-bold text-slate-900 dark:text-white">Récapitulatif de votre brief</h4>
-                                <p class="text-xs text-slate-500 dark:text-neutral-400">Vérifiez les informations avant l'envoi au talent.</p>
+                                <h4 class="text-base font-bold text-slate-900 dark:text-white" x-text="t('step4_title')">Récapitulatif de votre brief</h4>
+                                <p class="text-xs text-slate-500 dark:text-neutral-400" x-text="t('step4_sub')">Vérifiez les informations avant l'envoi au talent.</p>
                             </div>
 
                             <div class="space-y-3 text-xs bg-slate-50 dark:bg-neutral-900/60 p-4 rounded-xl border border-slate-200/80 dark:border-neutral-800">
                                 <div class="grid grid-cols-2 gap-2 border-b border-slate-200/60 dark:border-neutral-800 pb-2.5">
                                     <div>
-                                        <span class="text-slate-400 dark:text-neutral-500 block text-[10px] uppercase font-semibold">Contact</span>
+                                        <span class="text-slate-400 dark:text-neutral-500 block text-[10px] uppercase font-semibold" x-text="t('contact_summary')">Contact</span>
                                         <strong class="text-slate-800 dark:text-white" x-text="clientName"></strong>
                                         <div class="text-slate-500 dark:text-neutral-400 text-[11px]" x-text="clientEmail"></div>
                                         <div class="text-slate-500 dark:text-neutral-400 text-[11px]" x-text="clientPhone"></div>
                                     </div>
                                     <div>
-                                        <span class="text-slate-400 dark:text-neutral-500 block text-[10px] uppercase font-semibold">Organisation</span>
-                                        <span class="text-slate-700 dark:text-neutral-300" x-text="clientCompany || 'Particulier / Non renseigné'"></span>
+                                        <span class="text-slate-400 dark:text-neutral-500 block text-[10px] uppercase font-semibold" x-text="t('org_summary')">Organisation</span>
+                                        <span class="text-slate-700 dark:text-neutral-300" x-text="clientCompany || (currentLang === 'en' ? 'Individual / Not specified' : 'Particulier / Non renseigné')"></span>
                                     </div>
                                 </div>
 
                                 <div class="border-b border-slate-200/60 dark:border-neutral-800 pb-2.5 space-y-1">
-                                    <span class="text-slate-400 dark:text-neutral-500 block text-[10px] uppercase font-semibold">Titre du projet</span>
+                                    <span class="text-slate-400 dark:text-neutral-500 block text-[10px] uppercase font-semibold" x-text="t('project_title_label')">Titre du projet</span>
                                     <strong class="text-slate-900 dark:text-white text-sm" x-text="projectTitle"></strong>
                                     <p class="text-slate-600 dark:text-neutral-300 whitespace-pre-line text-xs" x-text="needDescription"></p>
                                 </div>
 
                                 <div class="grid grid-cols-2 gap-2 border-b border-slate-200/60 dark:border-neutral-800 pb-2.5 text-[11px]">
                                     <div>
-                                        <span class="text-slate-400 dark:text-neutral-500 block text-[10px] uppercase font-semibold">Budget envisagé</span>
-                                        <span class="text-slate-700 dark:text-neutral-300 font-medium" x-text="budget || 'À convenir'"></span>
+                                        <span class="text-slate-400 dark:text-neutral-500 block text-[10px] uppercase font-semibold" x-text="t('budget_summary')">Budget envisagé</span>
+                                        <span class="text-slate-700 dark:text-neutral-300 font-medium" x-text="budget || (currentLang === 'en' ? 'Negotiable' : 'À convenir')"></span>
                                     </div>
                                     <div>
-                                        <span class="text-slate-400 dark:text-neutral-500 block text-[10px] uppercase font-semibold">Délai souhaité</span>
-                                        <span class="text-slate-700 dark:text-neutral-300 font-medium" x-text="deadline || 'À convenir'"></span>
+                                        <span class="text-slate-400 dark:text-neutral-500 block text-[10px] uppercase font-semibold" x-text="t('deadline_summary')">Délai souhaité</span>
+                                        <span class="text-slate-700 dark:text-neutral-300 font-medium" x-text="deadline || (currentLang === 'en' ? 'Negotiable' : 'À convenir')"></span>
                                     </div>
                                 </div>
 
                                 <div x-show="expectedDeliverable" class="text-[11px]">
-                                    <span class="text-slate-400 dark:text-neutral-500 block text-[10px] uppercase font-semibold">Livrable attendu</span>
+                                    <span class="text-slate-400 dark:text-neutral-500 block text-[10px] uppercase font-semibold" x-text="t('deliverable_summary')">Livrable attendu</span>
                                     <span class="text-slate-700 dark:text-neutral-300" x-text="expectedDeliverable"></span>
                                 </div>
 
                                 <div class="pt-2 text-[11px] text-neutral-600 dark:text-neutral-400 flex items-start gap-2 bg-neutral-50 dark:bg-neutral-900 p-2.5 rounded-none border border-neutral-200 dark:border-neutral-800">
                                     <svg class="w-4 h-4 text-[#FFB515] shrink-0 mt-0.5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
-                                    <span>Après envoi, vous recevrez un e-mail de confirmation. Le talent étudiera votre demande et décidera s'il accepte le projet.</span>
+                                    <span x-text="t('step4_info')">Après envoi, vous recevrez un e-mail de confirmation. Le talent étudiera votre demande et décidera s'il accepte le projet.</span>
                                 </div>
                             </div>
                         </div>
@@ -1854,7 +2240,7 @@
                         @click.prevent="nextOrderStep()"
                         class="w-full py-3.5 px-6 bg-[#FFB515] hover:bg-[#E5A20C] text-black font-black text-sm uppercase tracking-wider shadow-sm transition flex items-center justify-center gap-2 cursor-pointer"
                     >
-                        <span>Continuer</span>
+                        <span x-text="t('btn_continue')">Continuer</span>
                     </button>
 
                     <button 
@@ -1868,7 +2254,7 @@
                             <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
                             <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
                         </svg>
-                        <span x-text="isSubmitting ? 'Envoi en cours...' : 'Envoyer ma demande de projet'">Envoyer ma demande de projet</span>
+                        <span x-text="isSubmitting ? t('btn_submitting') : t('btn_submit')">Envoyer ma demande de projet</span>
                     </button>
                 </div>
             </div>
@@ -1914,26 +2300,26 @@
 
                 <div>
                     <span class="inline-block px-3 py-1 bg-slate-100 dark:bg-neutral-800 text-slate-700 dark:text-neutral-300 text-xs font-mono font-bold rounded-full mb-2">
-                        Réf. {{ session('reference', 'TC-000XXX') }}
+                        <span x-text="t('success_ref')">Réf.</span> {{ session('reference', 'TC-000XXX') }}
                     </span>
-                    <h3 class="text-xl font-extrabold text-slate-900 dark:text-white">Demande enregistrée !</h3>
+                    <h3 class="text-xl font-extrabold text-slate-900 dark:text-white" x-text="t('success_title')">Demande enregistrée !</h3>
                     <p class="text-xs text-slate-600 dark:text-neutral-400 mt-1">
-                        Votre demande pour <strong class="text-slate-800 dark:text-white">"{{ session('project_title', $service['title']) }}"</strong> a bien été enregistrée.
+                        <span x-text="t('success_desc_prefix')">Votre demande pour</span> <strong class="text-slate-800 dark:text-white">"{{ session('project_title', $service['title']) }}"</strong> <span x-text="t('success_desc_suffix')">a bien été enregistrée.</span>
                     </p>
                 </div>
 
                 <div class="p-3.5 bg-slate-50 dark:bg-neutral-900/80 rounded-xl border border-slate-200/80 dark:border-neutral-800 text-left text-xs space-y-2 text-slate-600 dark:text-neutral-400">
                     <div class="flex items-start gap-2">
                         <span class="text-[#FFB515] font-black mr-1">✓</span>
-                        <span><strong>E-mail de confirmation :</strong> un récapitulatif avec votre référence unique vous a été envoyé.</span>
+                        <span><strong x-text="t('success_email_label')">E-mail de confirmation :</strong> <span x-text="t('success_email_text')">un récapitulatif avec votre référence unique vous a été envoyé.</span></span>
                     </div>
                     <div class="flex items-start gap-2">
                         <span class="text-[#FFB515] font-black mr-1">✓</span>
-                        <span><strong>Prochaine étape :</strong> le talent {{ session('talent_name', $service['author']) }} étudiera votre brief avant d'accepter le projet.</span>
+                        <span><strong x-text="t('success_next_label')">Prochaine étape :</strong> <span x-text="t('success_next_prefix')">le talent</span> {{ session('talent_name', $service['author']) }} <span x-text="t('success_next_suffix')">étudiera votre brief avant d'accepter le projet.</span></span>
                     </div>
                     <div class="flex items-start gap-2">
                         <span class="text-[#FFB515] font-black mr-1">✓</span>
-                        <span>Dès son acceptation, vous recevrez ses coordonnées directes pour échanger.</span>
+                        <span x-text="t('success_direct_text')">Dès son acceptation, vous recevrez ses coordonnées directes pour échanger.</span>
                     </div>
                 </div>
 
@@ -1942,6 +2328,7 @@
                         type="button"
                         @click="orderSuccess = false"
                         class="w-full py-3.5 px-6 bg-black text-white hover:bg-neutral-800 font-black text-xs uppercase tracking-wider shadow-sm transition cursor-pointer"
+                        x-text="t('success_btn')"
                     >
                         Compris, continuer
                     </button>
@@ -1963,14 +2350,14 @@
                             <span class="inline-flex items-center justify-center w-6 h-6 rounded-full bg-[#FFB515]/20 text-[#000000] dark:text-[#FFB515] text-xs font-black">
                                 ★
                             </span>
-                            <span class="text-xs font-bold uppercase tracking-widest text-[#B8860B] dark:text-[#FFB515]">
+                            <span class="text-xs font-bold uppercase tracking-widest text-[#B8860B] dark:text-[#FFB515]" x-text="t('reviews_tag')">
                                 Retours d'expérience vérifiés
                             </span>
                         </div>
-                        <h2 class="text-2xl sm:text-3xl font-extrabold text-black dark:text-white tracking-tight">
+                        <h2 class="text-2xl sm:text-3xl font-extrabold text-black dark:text-white tracking-tight" x-text="t('reviews_heading')">
                             Avis clients
                         </h2>
-                        <p class="text-xs sm:text-sm text-neutral-600 dark:text-neutral-400 mt-1">
+                        <p class="text-xs sm:text-sm text-neutral-600 dark:text-neutral-400 mt-1" x-text="t('reviews_sub')">
                             Avis et témoignages laissés par les clients sur cette prestation précise.
                         </p>
                     </div>
@@ -1991,7 +2378,8 @@
                                     @endfor
                                 </div>
                                 <div class="text-xs text-neutral-500 dark:text-neutral-400 font-medium mt-0.5">
-                                    {{ $reviewsCount }} {{ $reviewsCount > 1 ? 'avis publiés' : 'avis publié' }}
+                                    <span x-show="currentLang === 'fr'">{{ $reviewsCount }} {{ $reviewsCount > 1 ? 'avis publiés' : 'avis publié' }}</span>
+                                    <span x-show="currentLang === 'en'">{{ $reviewsCount }} {{ $reviewsCount > 1 ? 'published reviews' : 'published review' }}</span>
                                 </div>
                             </div>
                         </div>
@@ -2005,7 +2393,7 @@
                             <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"/>
                         </svg>
                         <div class="text-sm">
-                            <p class="font-bold">Merci pour votre retour !</p>
+                            <p class="font-bold" x-text="t('review_thank_you')">Merci pour votre retour !</p>
                             <p class="mt-0.5 text-emerald-800 dark:text-emerald-300">{{ session('review_success') }}</p>
                         </div>
                     </div>
@@ -2017,7 +2405,7 @@
                             <path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z" clip-rule="evenodd"/>
                         </svg>
                         <div class="text-sm">
-                            <p class="font-bold">Attention</p>
+                            <p class="font-bold" x-text="t('review_attention')">Attention</p>
                             <p class="mt-0.5 text-red-800 dark:text-red-300">{{ session('error') ?? $errors->first('review_error') }}</p>
                         </div>
                     </div>
@@ -2041,7 +2429,7 @@
                                                         {{ $rev->author_name }}
                                                     </h3>
                                                     <div class="flex items-center gap-2 mt-0.5">
-                                                        <span class="inline-flex items-center text-[10px] font-semibold text-emerald-700 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-950/60 px-1.5 py-0.5 rounded border border-emerald-200 dark:border-emerald-800/80">
+                                                        <span class="inline-flex items-center text-[10px] font-semibold text-emerald-700 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-950/60 px-1.5 py-0.5 rounded border border-emerald-200 dark:border-emerald-800/80" x-text="t('verified_review_badge')">
                                                             ✓ Avis vérifié
                                                         </span>
                                                         <time datetime="{{ $rev->created_at->toIso8601String() }}" class="text-[11px] text-neutral-400">
@@ -2073,10 +2461,10 @@
                                 <div class="w-12 h-12 rounded-full bg-white dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700 mx-auto flex items-center justify-center text-[#FFB515] text-xl mb-3 shadow-sm">
                                     ★
                                 </div>
-                                <h3 class="text-base font-bold text-neutral-900 dark:text-neutral-100">
+                                <h3 class="text-base font-bold text-neutral-900 dark:text-neutral-100" x-text="t('no_reviews_title')">
                                     Aucun avis pour le moment
                                 </h3>
-                                <p class="text-xs sm:text-sm text-neutral-500 dark:text-neutral-400 max-w-md mx-auto mt-1">
+                                <p class="text-xs sm:text-sm text-neutral-500 dark:text-neutral-400 max-w-md mx-auto mt-1" x-text="t('no_reviews_desc')">
                                     Aucun avis pour le moment. Soyez le premier à partager votre expérience.
                                 </p>
                             </div>
@@ -2095,12 +2483,12 @@
                         >
                             <div class="mb-5 pb-4 border-b border-neutral-100 dark:border-neutral-800">
                                 <h3 class="text-lg font-bold text-black dark:text-white flex items-center gap-2">
-                                    <span>Laisser un avis client</span>
-                                    <span class="text-[10px] font-semibold text-neutral-500 bg-neutral-100 dark:bg-neutral-800 px-2 py-0.5 rounded-full">
+                                    <span x-text="t('leave_review_title')">Laisser un avis client</span>
+                                    <span class="text-[10px] font-semibold text-neutral-500 bg-neutral-100 dark:bg-neutral-800 px-2 py-0.5 rounded-full" x-text="t('no_registration')">
                                         Sans inscription
                                     </span>
                                 </h3>
-                                <p class="text-xs text-neutral-500 dark:text-neutral-400 mt-1">
+                                <p class="text-xs text-neutral-500 dark:text-neutral-400 mt-1" x-text="t('leave_review_sub')">
                                     Partagez votre avis en toute transparence. Votre avis sera examiné par notre équipe avant publication.
                                 </p>
                             </div>
@@ -2123,7 +2511,7 @@
                                     {{-- 1. Nom ou prénom --}}
                                     <div>
                                         <label for="review_author_name" class="block text-xs font-bold text-neutral-700 dark:text-neutral-300 uppercase tracking-wider mb-1.5">
-                                            Votre nom ou prénom <span class="text-red-500">*</span>
+                                            <span x-text="t('your_name')">Votre nom ou prénom</span> <span class="text-red-500">*</span>
                                         </label>
                                         <input 
                                             type="text" 
@@ -2133,6 +2521,7 @@
                                             required 
                                             minlength="2"
                                             maxlength="100"
+                                            :placeholder="t('your_name_ph')"
                                             placeholder="Ex. Alexandre D. ou Entreprise Zenith"
                                             class="w-full px-3.5 py-2.5 text-xs sm:text-sm rounded-lg border border-neutral-300 dark:border-neutral-700 bg-white dark:bg-neutral-900 text-black dark:text-white focus:outline-none focus:ring-2 focus:ring-[#FFB515] focus:border-transparent transition"
                                         >
@@ -2144,7 +2533,7 @@
                                     {{-- 2. Note (1 à 5 étoiles) --}}
                                     <div>
                                         <label class="block text-xs font-bold text-neutral-700 dark:text-neutral-300 uppercase tracking-wider mb-1.5">
-                                            Votre note <span class="text-red-500">*</span>
+                                            <span x-text="t('your_rating')">Votre note</span> <span class="text-red-500">*</span>
                                         </label>
                                         <div class="flex items-center gap-1.5">
                                             <input type="hidden" name="rating" :value="rating">
@@ -2174,7 +2563,7 @@
                                     {{-- 3. Commentaire --}}
                                     <div>
                                         <label for="review_comment" class="block text-xs font-bold text-neutral-700 dark:text-neutral-300 uppercase tracking-wider mb-1.5">
-                                            Votre commentaire <span class="text-red-500">*</span>
+                                            <span x-text="t('your_comment')">Votre commentaire</span> <span class="text-red-500">*</span>
                                         </label>
                                         <textarea 
                                             id="review_comment" 
@@ -2183,12 +2572,13 @@
                                             required 
                                             minlength="10"
                                             maxlength="1500"
+                                            :placeholder="t('your_comment_ph')"
                                             placeholder="Décrivez votre expérience : réactivité, respect des délais, qualité du travail livré..."
                                             class="w-full px-3.5 py-2.5 text-xs sm:text-sm rounded-lg border border-neutral-300 dark:border-neutral-700 bg-white dark:bg-neutral-900 text-black dark:text-white focus:outline-none focus:ring-2 focus:ring-[#FFB515] focus:border-transparent transition"
                                         >{{ old('comment') }}</textarea>
                                         <div class="flex justify-between items-center text-[11px] text-neutral-400 mt-1">
-                                            <span>Minimum 10 caractères</span>
-                                            <span>Max 1 500 caractères</span>
+                                            <span x-text="t('min_chars')">Minimum 10 caractères</span>
+                                            <span x-text="t('max_chars')">Max 1 500 caractères</span>
                                         </div>
                                         @error('comment')
                                             <p class="text-red-500 text-[11px] mt-1">{{ $message }}</p>
@@ -2198,10 +2588,10 @@
                                     {{-- 4. Adresse e-mail (facultative, non affichée publiquement) --}}
                                     <div>
                                         <div class="flex items-center justify-between mb-1.5">
-                                            <label for="review_email" class="block text-xs font-bold text-neutral-700 dark:text-neutral-300 uppercase tracking-wider">
+                                            <label for="review_email" class="block text-xs font-bold text-neutral-700 dark:text-neutral-300 uppercase tracking-wider" x-text="t('your_email')">
                                                 Votre e-mail
                                             </label>
-                                            <span class="text-[10px] text-neutral-400">Facultatif</span>
+                                            <span class="text-[10px] text-neutral-400" x-text="t('email_optional')">Facultatif</span>
                                         </div>
                                         <input 
                                             type="email" 
@@ -2211,7 +2601,7 @@
                                             placeholder="contact@exemple.com"
                                             class="w-full px-3.5 py-2.5 text-xs sm:text-sm rounded-lg border border-neutral-300 dark:border-neutral-700 bg-white dark:bg-neutral-900 text-black dark:text-white focus:outline-none focus:ring-2 focus:ring-[#FFB515] focus:border-transparent transition"
                                         >
-                                        <p class="text-[10px] text-neutral-500 dark:text-neutral-400 mt-1">
+                                        <p class="text-[10px] text-neutral-500 dark:text-neutral-400 mt-1" x-text="t('email_disclaimer')">
                                             🔒 Votre e-mail reste strictement confidentiel et ne sera jamais affiché publiquement. Il sert uniquement à la modération.
                                         </p>
                                         @error('email')
@@ -2226,23 +2616,23 @@
                                             :disabled="isSubmitting"
                                             class="w-full py-3.5 px-6 bg-black text-white hover:bg-[#FFB515] hover:text-black font-extrabold text-xs uppercase tracking-wider rounded-xl transition duration-200 cursor-pointer flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed shadow-sm"
                                         >
-                                            <span x-show="!isSubmitting">Envoyer mon avis</span>
+                                            <span x-show="!isSubmitting" x-text="t('submit_review_btn')">Envoyer mon avis</span>
                                             <span x-show="isSubmitting" style="display: none;" class="flex items-center gap-2">
                                                 <svg class="animate-spin h-4 w-4 text-current" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
                                                     <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
                                                     <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
                                                 </svg>
-                                                Envoi en cours...
+                                                <span x-text="t('submitting_review')">Envoi en cours...</span>
                                             </span>
                                         </button>
                                     </div>
 
-                                    <p class="text-[10px] text-center text-neutral-400 dark:text-neutral-500 leading-tight">
+                                    <p class="text-[10px] text-center text-neutral-400 dark:text-neutral-500 leading-tight" x-text="t('review_legal_note')">
                                         En soumettant cet avis, vous attestez de la sincérité de votre témoignage.
                                     </p>
                                 </form>
                             @else
-                                <p class="text-xs text-neutral-500">
+                                <p class="text-xs text-neutral-500" x-text="t('review_form_unavailable')">
                                     Le formulaire d'avis est disponible uniquement sur les prestations publiées.
                                 </p>
                             @endif
@@ -2262,13 +2652,13 @@
                 
                 <div class="flex flex-col sm:flex-row sm:items-end justify-between gap-4 mb-12 text-left">
                     <div>
-                        <span class="text-xs font-bold uppercase tracking-widest text-[#B8860B] dark:text-[#FFB515]">
+                        <span class="text-xs font-bold uppercase tracking-widest text-[#B8860B] dark:text-[#FFB515]" x-text="t('rec_tag')">
                             RECOMMANDATIONS COMPLÉMENTAIRES
                         </span>
-                        <h2 class="text-2xl sm:text-3xl font-extrabold text-black dark:text-white tracking-tight mt-1">
+                        <h2 class="text-2xl sm:text-3xl font-extrabold text-black dark:text-white tracking-tight mt-1" x-text="t('rec_title')">
                             Autres prestations certifiées similaires
                         </h2>
-                        <p class="text-xs sm:text-sm text-neutral-600 dark:text-neutral-400 mt-1">
+                        <p class="text-xs sm:text-sm text-neutral-600 dark:text-neutral-400 mt-1" x-text="t('rec_sub')">
                             Explorez d'autres services indispensables pour faire passer votre marque au niveau supérieur.
                         </p>
                     </div>
@@ -2277,7 +2667,7 @@
                         href="{{ url('/talents') }}" 
                         class="text-xs font-bold text-black dark:text-white hover:underline flex items-center gap-1 flex-shrink-0"
                     >
-                        <span>Voir tout le catalogue ({{ count($similarServices) + 1 }})</span>
+                        <span><span x-text="t('view_all_catalog')">Voir tout le catalogue</span> ({{ count($similarServices) + 1 }})</span>
                         <span>→</span>
                     </a>
                 </div>
@@ -2300,9 +2690,9 @@
                             <div class="absolute top-3.5 left-3.5 flex items-center gap-2">
                                 <span class="inline-flex items-center gap-1.5 px-3 py-1 rounded-none bg-black/85 backdrop-blur-md text-white text-[11px] font-bold shadow-xs border border-white/10">
                                     <span class="w-2 h-2 rounded-none bg-emerald-400"></span>
-                                    <span>Certifié</span>
+                                    <span x-text="t('certified_badge')">Certifié</span>
                                 </span>
-                                <span class="inline-flex items-center px-3 py-1 rounded-none bg-white/95 dark:bg-neutral-900/95 backdrop-blur-md text-black dark:text-white text-[11px] font-bold shadow-xs border border-black/10 dark:border-white/10">
+                                <span class="inline-flex items-center px-3 py-1 rounded-none bg-white/95 dark:bg-neutral-900/95 backdrop-blur-md text-black dark:text-white text-[11px] font-bold shadow-xs border border-black/10 dark:border-white/10" x-text="getCategoryName('{{ $sim['category'] }}')">
                                     {{ $sim['category'] }}
                                 </span>
                             </div>
@@ -2313,7 +2703,7 @@
                                     <svg class="w-3.5 h-3.5 fill-current text-[#FFB515]" viewBox="0 0 24 24">
                                         <path d="M19 4h-1V2h-2v2H8V2H6v2H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V6c0-1.1-.9-2-2-2zm0 16H5V9h14v11zM7 11h2v2H7v-2zm4 0h2v2h-2v-2zm4 0h2v2h-2v-2z"/>
                                     </svg>
-                                    <span>{{ $sim['delivery_time'] }}</span>
+                                    <span x-text="getDeliveryText('{{ $sim['delivery_time'] }}')">{{ $sim['delivery_time'] }}</span>
                                 </span>
                             </div>
                         </a>
@@ -2326,7 +2716,7 @@
                                 </h3>
 
                                 <div class="text-xs text-neutral-600 dark:text-neutral-400 mt-2 flex items-center gap-1.5 font-medium">
-                                    <span>Par <strong class="text-black dark:text-white font-bold">{{ $sim['author'] }}</strong></span>
+                                    <span><span x-text="t('by_author')">Par</span> <strong class="text-black dark:text-white font-bold">{{ $sim['author'] }}</strong></span>
                                     <span>·</span>
                                     <span class="font-bold text-[#B8860B] dark:text-[#FFB515]">Talent Club Pro</span>
                                 </div>
@@ -2363,15 +2753,9 @@
         <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10">
             
             <div class="flex flex-col md:flex-row items-center justify-between gap-8 pb-10 border-b border-gray-100 dark:border-neutral-800">
-                <a href="{{ url('/') }}" class="flex items-center gap-2 group" aria-label="Talent Club">
-                    <div class="flex flex-col leading-none">
-                        <div class="relative flex items-center">
-                            <span class="tc-logo-text text-[30px] text-black dark:text-white">talent</span>
-                            <span class="absolute top-[3px] left-[45px] w-2.5 h-2.5 rounded-full bg-[#FFB515]"></span>
-                            <span class="absolute -top-[5px] right-[0px] text-[#FFB515] text-[18px] font-bold">★</span>
-                        </div>
-                        <span class="tc-logo-text text-[30px] text-black dark:text-white -mt-1">club</span>
-                    </div>
+                <a href="{{ url('/') }}" class="flex items-center gap-2 group hover:opacity-90 transition-opacity" aria-label="Talent Club">
+                    <img src="{{ asset('images/logo.png') }}" alt="Talent Club" class="h-10 w-auto object-contain">
+                    <span class="sr-only">talent club</span>
                 </a>
 
                 <div class="flex flex-wrap items-center justify-center gap-6 sm:gap-8">
@@ -2439,6 +2823,7 @@
                         <button 
                             @click="footerLangDropdown = !footerLangDropdown"
                             class="h-12 px-4 rounded-none border-2 border-neutral-300 dark:border-neutral-700 hover:border-black dark:hover:border-white bg-white dark:bg-neutral-900 flex items-center gap-2.5 text-xs font-bold text-neutral-800 dark:text-neutral-200 transition-all cursor-pointer touch-manipulation active:scale-95"
+                            :aria-label="t('choose_site_lang')"
                             aria-label="Choisir la langue du site"
                         >
                             <span class="flex items-center gap-1.5">
@@ -2480,15 +2865,15 @@
                 <div class="flex items-center gap-2">
                     <span>© 2026</span>
                     <strong class="font-bold text-neutral-900 dark:text-white">Talent Club</strong>
-                    <span>— Tous droits réservés.</span>
+                    <span x-text="t('footer_rights')">— Tous droits réservés.</span>
                 </div>
 
                 <div class="flex flex-wrap items-center justify-center gap-6 sm:gap-8 font-medium">
-                    <a href="#" class="hover:text-black dark:hover:text-white transition-colors">Mentions légales</a>
-                    <a href="#" class="hover:text-black dark:hover:text-white transition-colors">Confidentialité</a>
-                    <a href="{{ route('client.demandes.index') }}" class="hover:text-black dark:hover:text-white transition-colors">Suivi client</a>
-                    <a href="{{ route('candidature.create') }}" class="hover:text-black dark:hover:text-white transition-colors">Devenir talent</a>
-                    <a href="{{ url('/talents') }}" class="hover:text-black dark:hover:text-white transition-colors">Catalogue</a>
+                    <a href="#" class="hover:text-black dark:hover:text-white transition-colors" x-text="t('footer_legal')">Mentions légales</a>
+                    <a href="#" class="hover:text-black dark:hover:text-white transition-colors" x-text="t('footer_privacy')">Confidentialité</a>
+                    <a href="{{ route('client.demandes.index') }}" class="hover:text-black dark:hover:text-white transition-colors" x-text="t('footer_tracking')">Suivi client</a>
+                    <a href="{{ route('candidature.create') }}" class="hover:text-black dark:hover:text-white transition-colors" x-text="t('footer_join')">Devenir talent</a>
+                    <a href="{{ url('/talents') }}" class="hover:text-black dark:hover:text-white transition-colors" x-text="t('footer_catalog')">Catalogue</a>
                 </div>
             </div>
 
@@ -2509,6 +2894,8 @@
         x-transition:leave-end="opacity-0 translate-y-4 scale-90"
         @click="window.scrollTo({ top: 0, behavior: 'smooth' })"
         class="fixed bottom-6 right-6 z-[9999] w-12 h-12 sm:w-14 sm:h-14 rounded-none bg-black dark:bg-[#FFB515] text-[#FFB515] dark:text-black hover:bg-[#FFB515] hover:text-black dark:hover:bg-white shadow-2xl flex items-center justify-center transition-all duration-150 border-2 border-black dark:border-[#FFB515] touch-manipulation active:scale-90 group select-none cursor-pointer"
+        :aria-label="t('scroll_top_aria')"
+        :title="t('scroll_top_aria')"
         aria-label="Remonter en haut de la page"
         title="Remonter en haut"
     >

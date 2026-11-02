@@ -485,9 +485,10 @@ class PrestationBriefAndTalentDecisionTest extends TestCase
 
         $resAccept->assertSessionHas('success');
         $projectAccept->refresh();
-        $this->assertEquals('reponse_talent', $projectAccept->status);
+        $this->assertEquals('mission_confirmee', $projectAccept->status);
         $this->assertNotNull($projectAccept->talent_responded_at);
-        $this->assertStringContainsString('Demande de projet acceptée par le talent.', $projectAccept->talent_response_notes);
+        $this->assertNotNull($projectAccept->mission_confirmed_at);
+        $this->assertStringContainsString('Demande acceptée par le talent. Mission confirmée.', $projectAccept->talent_response_notes);
 
         // Projet à décliner
         $projectDecline = ProjectRequest::create([

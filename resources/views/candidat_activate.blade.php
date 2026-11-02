@@ -4,7 +4,10 @@
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>Activation du Compte Talent — Talent Club</title>
-    <link rel="icon" type="image/svg+xml" href="{{ asset('images/logo.svg') ?? '/images/logo.svg' }}">
+    <!-- Favicon -->
+    <link rel="icon" type="image/x-icon" href="{{ asset('favicon.ico') }}">
+    <link rel="icon" type="image/png" sizes="32x32" href="{{ asset('images/favicon.png') }}">
+    <link rel="apple-touch-icon" sizes="180x180" href="{{ asset('images/apple-touch-icon.png') }}">
 
     <!-- Google Fonts -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -44,10 +47,9 @@
     <!-- HEADER MINIMALISTE -->
     <header class="w-full bg-[#111111] text-white py-4 px-6 border-b border-neutral-800">
         <div class="max-w-6xl mx-auto flex items-center justify-between">
-            <a href="{{ url('/') }}" class="inline-flex items-center gap-1 group">
-                <span class="tc-logo-text text-2xl text-white">talent</span>
-                <span class="text-tcYellow font-bold text-xl">★</span>
-                <span class="tc-logo-text text-2xl text-white">club</span>
+            <a href="{{ url('/') }}" class="inline-flex items-center gap-1 group hover:opacity-90 transition-opacity" aria-label="Talent Club Accueil">
+                <img src="{{ asset('images/logo-white.png') }}" alt="Talent Club" class="h-8 w-auto object-contain">
+                <span class="sr-only">talent club</span>
             </a>
             <span class="text-xs font-bold font-mono text-tcYellow uppercase tracking-wider">
                 Activation de Compte

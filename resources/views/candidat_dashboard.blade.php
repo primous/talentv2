@@ -4,7 +4,10 @@
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>Espace Talent — Tableau de Bord & Back-office | Talent Club</title>
-    <link rel="icon" type="image/svg+xml" href="{{ asset('images/logo.svg') ?? '/images/logo.svg' }}">
+    <!-- Favicon -->
+    <link rel="icon" type="image/x-icon" href="{{ asset('favicon.ico') }}">
+    <link rel="icon" type="image/png" sizes="32x32" href="{{ asset('images/favicon.png') }}">
+    <link rel="apple-touch-icon" sizes="180x180" href="{{ asset('images/apple-touch-icon.png') }}">
 
     <!-- Google Fonts: Inter, Montserrat & Sora (Design System) -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -24,16 +27,16 @@
             theme: {
                 extend: {
                     colors: {
-                        tcYellow: '#FFB515',
-                        tcYellowDark: '#E5A20C',
-                        tcYellowLight: '#FFF9EC',
-                        tcYellowBorder: '#FFE7A3',
+                        tcYellow: '#FFB800',
+                        tcYellowDark: '#E5A600',
+                        tcYellowLight: '#FFFDF5',
+                        tcYellowBorder: '#FFEAA7',
                         tcDark: '#111111',
-                        tcSurface: '#FAF8F2',
-                        tcCardBorder: '#E8E5DC',
+                        tcSurface: '#F7F7F8',
+                        tcCardBorder: '#E5E5E7',
                     },
                     fontFamily: {
-                        sans: ['Montserrat', 'sans-serif'],
+                        sans: ['Inter', 'Montserrat', 'sans-serif'],
                         heading: ['Inter', 'sans-serif'],
                         mono: ['Sora', 'monospace'],
                     }
@@ -47,24 +50,94 @@
 
     <style>
         [x-cloak] { display: none !important; }
-        body { font-family: 'Montserrat', sans-serif; }
-        h1, h2, h3, h4, h5, h6, .font-heading { font-family: 'Inter', sans-serif; letter-spacing: -0.028em; }
-        .tc-logo-text { font-family: 'Montserrat', 'Inter', sans-serif; font-weight: 900; letter-spacing: -0.04em; }
+        body { font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background-color: #F7F7F8; color: #111111; }
+        h1, h2, h3, h4, h5, h6, .font-heading { font-family: 'Inter', sans-serif; letter-spacing: -0.025em; }
+        .tc-logo-text { font-family: 'Inter', sans-serif; font-weight: 900; letter-spacing: -0.04em; }
         /* Custom scrollbar */
         ::-webkit-scrollbar { width: 6px; height: 6px; }
-        ::-webkit-scrollbar-track { background: #FAF8F2; }
-        ::-webkit-scrollbar-thumb { background: #D5D2C9; border-radius: 9999px; }
-        ::-webkit-scrollbar-thumb:hover { background: #FFB515; }
+        ::-webkit-scrollbar-track { background: #F7F7F8; }
+        ::-webkit-scrollbar-thumb { background: #E5E5E7; border-radius: 9999px; }
+        ::-webkit-scrollbar-thumb:hover { background: #FFB800; }
     </style>
 </head>
 <body 
     x-data="{ 
-        tab: 'dashboard', 
+        validTabs: {{ Js::from($validTabs ?? ['dashboard', 'demandes', 'competences', 'profil', 'realisations', 'notifications', 'parametres', 'devis_missions', 'avis', 'stats']) }},
+        tab: '{{ $activeTab ?? 'dashboard' }}', 
         mobileMenuOpen: false, 
         searchQuery: '',
-        demandeFilter: 'toutes',
+        demandeFilter: '{{ request()->query('filter', 'toutes') }}',
+        demandeSearch: '',
         selectedRequest: null,
         showBriefModal: false,
+        briefActionType: 'accepter',
+        submittingResponse: false,
+        activeDemandeId: {{ request()->query('demande_id', 'null') }},
+        allDemandesList: {{ Js::from($projectRequests['all'] ?? []) }},
+        setTab(targetTab) {
+            const sanitizedTab = this.validTabs.includes(targetTab) ? targetTab : 'dashboard';
+            window.location.href = '{{ route('candidat.dashboard') }}?tab=' + encodeURIComponent(sanitizedTab);
+        },
+        init() {
+            if (this.activeDemandeId) {
+                const found = this.allDemandesList.find(d => d.id == this.activeDemandeId);
+                if (found) {
+                    this.selectedRequest = found;
+                    this.showBriefModal = true;
+                    this.tab = 'demandes';
+                }
+            }
+        },
+        getFilteredDemandes() {
+            return this.allDemandesList.filter(d => {
+                let matchCat = true;
+                if (this.demandeFilter !== 'toutes') {
+                    if (this.demandeFilter === 'a_traiter') {
+                        matchCat = (d.status === 'a_traiter');
+                    } else if (this.demandeFilter === 'repondues') {
+                        matchCat = (d.status === 'repondues');
+                    } else if (this.demandeFilter === 'acceptees') {
+                        matchCat = (d.status === 'acceptees');
+                    } else if (this.demandeFilter === 'en_cours') {
+                        matchCat = (d.status === 'en_cours');
+                    } else if (this.demandeFilter === 'terminees') {
+                        matchCat = (d.status === 'terminees');
+                    } else if (this.demandeFilter === 'annulees') {
+                        matchCat = (d.status === 'annulees');
+                    }
+                }
+                let matchQ = true;
+                if (this.demandeSearch && this.demandeSearch.trim() !== '') {
+                    const q = this.demandeSearch.toLowerCase().trim();
+                    matchQ = (
+                        (d.reference && d.reference.toLowerCase().includes(q)) ||
+                        (d.client_name && d.client_name.toLowerCase().includes(q)) ||
+                        (d.client_company && d.client_company.toLowerCase().includes(q)) ||
+                        (d.title && d.title.toLowerCase().includes(q)) ||
+                        (d.category && d.category.toLowerCase().includes(q)) ||
+                        (d.competency_name && d.competency_name.toLowerCase().includes(q)) ||
+                        (d.budget && d.budget.toLowerCase().includes(q))
+                    );
+                }
+                return matchCat && matchQ;
+            });
+        },
+        matchesDemande(status, searchHaystack) {
+            if (this.demandeFilter !== 'toutes') {
+                if (this.demandeFilter === 'nouvelles' && status === 'a_traiter') {
+                    // compatibilité
+                } else if (this.demandeFilter === 'en_attente' && status === 'repondues') {
+                    // compatibilité
+                } else if (this.demandeFilter !== status) {
+                    return false;
+                }
+            }
+            if (this.demandeSearch && this.demandeSearch.trim() !== '') {
+                const q = this.demandeSearch.toLowerCase().trim();
+                return searchHaystack.toLowerCase().includes(q);
+            }
+            return true;
+        },
         showAddSkillModal: false,
         showEditSkillModal: false,
         editingSkill: {},
@@ -77,7 +150,7 @@
         newSkillIsCustom: false,
         newSkillCustomName: ''
     }" 
-    class="min-h-screen bg-[#FAF8F2] text-[#111111] font-sans antialiased selection:bg-[#FFB515] selection:text-black"
+    class="min-h-screen bg-[#F7F7F8] text-[#111111] font-sans antialiased selection:bg-[#FFB800] selection:text-[#111]"
 >
 
     <!-- BANNIÈRE NOTIFICATION FLASH (SUCCÈS / ERREUR) -->
@@ -103,219 +176,214 @@
         </div>
     @endif
 
-    <!-- CONTENEUR GLOBAL PRINCIPAL EN 3 COLONNES -->
-    <div class="max-w-[1720px] mx-auto min-h-screen flex flex-col lg:flex-row p-2 sm:p-4 lg:p-6 gap-4 lg:gap-6">
+    @if (session('warning'))
+        <div class="fixed top-4 right-4 z-50 max-w-md bg-white border-l-4 border-amber-500 shadow-xl rounded-xl p-4 flex items-start gap-3 transition-all">
+            <div class="w-7 h-7 rounded-full bg-amber-100 text-amber-700 flex items-center justify-center font-bold text-sm shrink-0">⚠️</div>
+            <div class="text-xs text-neutral-800">
+        </div>
+    @endif
+
+    <!-- CONTENEUR GLOBAL PRINCIPAL -->
+    <div class="min-h-screen bg-[#F7F7F8]">
 
         <!-- ============================================================== -->
-        <!-- COLONNE 1 : BARRE LATÉRALE DE NAVIGATION (MENU GAUCHE)         -->
+        <!-- COLONNE 1 : BARRE LATÉRALE DE NAVIGATION (MENU GAUCHE FIXE)     -->
         <!-- ============================================================== -->
         <aside 
             :class="mobileMenuOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'"
-            class="fixed lg:static inset-y-0 left-0 z-40 w-72 lg:w-64 xl:w-72 bg-white lg:bg-white rounded-3xl border border-[#E8E5DC] shadow-sm flex flex-col justify-between p-5 transition-transform duration-300 ease-in-out shrink-0 overflow-y-auto"
+            class="fixed inset-y-0 left-0 z-40 w-64 h-screen bg-white border-r border-neutral-200/80 flex flex-col justify-between p-4 transition-transform duration-300 ease-in-out shrink-0 overflow-y-auto"
         >
-            <div class="space-y-6">
+            <div class="space-y-4">
                 <!-- LOGO OFFICIEL TALENT CLUB & PHOTO DE PROFIL DU TALENT -->
-                <div class="flex items-center justify-between gap-3 pb-4 border-b border-neutral-100">
+                <div class="flex items-center justify-between gap-3 pb-3 border-b border-neutral-100">
                     <a href="{{ url('/') }}" class="flex items-center group transition-transform hover:opacity-90" aria-label="Talent Club">
-                        <img src="{{ asset('images/logo.svg') }}" alt="Talent Club" class="h-10 w-auto object-contain">
+                        <img src="{{ asset('images/logo.png') }}" alt="Talent Club" class="h-8 w-auto object-contain">
                     </a>
 
                     <div class="flex items-center gap-2">
                         <!-- Uniquement la photo de profil à côté du logo -->
-                        <button 
-                            type="button" 
-                            @click="tab = 'profil'; mobileMenuOpen = false"
+                        <a 
+                            href="{{ route('candidat.dashboard', ['tab' => 'profil']) }}"
                             title="Mon profil ({{ $candidate->full_name }})"
-                            class="relative block rounded-full focus:outline-none focus:ring-2 focus:ring-[#FFB515] p-0.5 transition-transform hover:scale-105 shrink-0"
+                            class="relative block rounded-full focus:outline-none focus:ring-2 focus:ring-[#FFB800] p-0.5 transition-transform hover:scale-105 shrink-0"
                         >
-                            <div class="w-10 h-10 rounded-full overflow-hidden border-2 border-[#FFB515] ring-2 ring-[#FFF9EC] shadow-sm">
+                            <div class="w-8 h-8 rounded-full overflow-hidden border border-neutral-200 shadow-sm">
                                 @if ($candidate->profile_photo)
                                     <img src="{{ $candidate->profile_photo }}" alt="{{ $candidate->full_name }}" class="w-full h-full object-cover">
                                 @else
-                                    <div class="w-full h-full bg-black text-[#FFB515] font-black text-xs flex items-center justify-center">
+                                    <div class="w-full h-full bg-[#111] text-[#FFB800] font-black text-xs flex items-center justify-center font-heading">
                                         {{ substr($candidate->full_name, 0, 2) }}
                                     </div>
                                 @endif
                             </div>
                             <!-- Pastille statut en ligne / disponible -->
-                            <span class="absolute bottom-0 right-0 w-3 h-3 rounded-full bg-emerald-500 ring-2 ring-white" title="Talent disponible"></span>
-                        </button>
+                            <span class="absolute bottom-0 right-0 w-2.5 h-2.5 rounded-full bg-emerald-500 ring-2 ring-white" title="Talent disponible"></span>
+                        </a>
 
-                        <button @click="mobileMenuOpen = false" class="lg:hidden p-1 text-neutral-400 hover:text-black">
-                            <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
+                        <button type="button" @click="mobileMenuOpen = false" class="lg:hidden p-1 text-neutral-400 hover:text-black">
+                            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
                         </button>
                     </div>
                 </div>
 
-                <div class="px-2">
-                    <span class="text-[10px] uppercase tracking-wider font-extrabold text-neutral-400">Espace Pro Certifié</span>
-                    <div class="text-xs font-bold text-neutral-900 mt-0.5 truncate">{{ $candidate->job_title }}</div>
+                <div class="px-2.5 py-1.5 bg-[#F7F7F8] rounded-xl border border-neutral-200/60">
+                    <span class="text-[10px] uppercase tracking-wider font-extrabold text-neutral-400 block font-mono">Espace Pro Certifié</span>
+                    <div class="text-xs font-bold text-[#111] mt-0.5 truncate" title="{{ $candidate->job_title }}">{{ $candidate->job_title }}</div>
                 </div>
 
-                <!-- NAVIGATION : LES 7 MENUS ESSENTIELS DU TALENT -->
-                <nav class="space-y-1.5">
-                    <div class="text-[10px] font-black uppercase tracking-wider text-neutral-400 px-3 pt-2">Menu Principal</div>
+                <!-- NAVIGATION : LES MENUS DU TALENT -->
+                <nav class="space-y-1">
+                    <div class="text-[10px] font-bold uppercase tracking-wider text-neutral-400 px-3 pt-1 font-mono">Menu Principal</div>
 
                     <!-- 1. Tableau de bord -->
-                    <button 
-                        @click="tab = 'dashboard'; mobileMenuOpen = false"
-                        :class="tab === 'dashboard' ? 'bg-[#FFB515] text-black font-extrabold shadow-sm' : 'text-neutral-600 hover:text-black hover:bg-neutral-50 font-medium'"
-                        class="w-full flex items-center justify-between px-3.5 py-2.5 rounded-2xl text-xs transition-all duration-150 text-left"
+                    <a 
+                        href="{{ route('candidat.dashboard', ['tab' => 'dashboard']) }}"
+                        :class="tab === 'dashboard' ? 'bg-[#111] text-white font-bold shadow-sm' : 'text-neutral-600 hover:text-[#111] hover:bg-[#F7F7F8] font-medium'"
+                        class="w-full flex items-center justify-between px-3 py-2 rounded-xl text-xs transition-colors duration-150 text-left cursor-pointer {{ ($activeTab ?? 'dashboard') === 'dashboard' ? 'bg-[#111] text-white font-bold shadow-sm' : 'text-neutral-600 hover:text-[#111] hover:bg-[#F7F7F8] font-medium' }}"
                     >
-                        <div class="flex items-center gap-3">
-                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2V6zM14 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V6zM4 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2v-2zM14 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2v-2z"/></svg>
+                        <div class="flex items-center gap-2.5">
+                            <svg class="w-4 h-4" :class="tab === 'dashboard' ? 'text-[#FFB800]' : 'text-neutral-400'" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2V6zM14 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V6zM4 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2v-2zM14 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2v-2z"/></svg>
                             <span>Tableau de bord</span>
                         </div>
-                    </button>
+                    </a>
 
                     <!-- 2. Demandes de projets -->
-                    <button 
-                        @click="tab = 'demandes'; mobileMenuOpen = false"
-                        :class="tab === 'demandes' ? 'bg-[#FFB515] text-black font-extrabold shadow-sm' : 'text-neutral-600 hover:text-black hover:bg-neutral-50 font-medium'"
-                        class="w-full flex items-center justify-between px-3.5 py-2.5 rounded-2xl text-xs transition-all duration-150 text-left"
+                    <a 
+                        href="{{ route('candidat.dashboard', ['tab' => 'demandes']) }}"
+                        :class="tab === 'demandes' ? 'bg-[#111] text-white font-bold shadow-sm' : 'text-neutral-600 hover:text-[#111] hover:bg-[#F7F7F8] font-medium'"
+                        class="w-full flex items-center justify-between px-3 py-2 rounded-xl text-xs transition-colors duration-150 text-left cursor-pointer {{ ($activeTab ?? '') === 'demandes' ? 'bg-[#111] text-white font-bold shadow-sm' : 'text-neutral-600 hover:text-[#111] hover:bg-[#F7F7F8] font-medium' }}"
                     >
-                        <div class="flex items-center gap-3">
-                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4"/></svg>
+                        <div class="flex items-center gap-2.5">
+                            <svg class="w-4 h-4" :class="tab === 'demandes' ? 'text-[#FFB800]' : 'text-neutral-400'" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4"/></svg>
                             <span>Demandes de projets</span>
                         </div>
-                        <span class="px-2 py-0.5 text-[10px] font-black rounded-full" :class="tab === 'demandes' ? 'bg-black text-[#FFB515]' : 'bg-[#FFB515] text-black'">
+                        <span class="px-2 py-0.5 text-[10px] font-bold rounded-full" :class="tab === 'demandes' ? 'bg-[#FFB800] text-[#111]' : 'bg-neutral-100 text-neutral-600'">
                             {{ count($projectRequests['nouvelles'] ?? []) }}
                         </span>
-                    </button>
+                    </a>
 
                     <!-- 3. Mes compétences -->
-                    <button 
-                        @click="tab = 'competences'; mobileMenuOpen = false"
-                        :class="tab === 'competences' ? 'bg-[#FFB515] text-black font-extrabold shadow-sm' : 'text-neutral-600 hover:text-black hover:bg-neutral-50 font-medium'"
-                        class="w-full flex items-center justify-between px-3.5 py-2.5 rounded-2xl text-xs transition-all duration-150 text-left"
+                    <a 
+                        href="{{ route('candidat.dashboard', ['tab' => 'competences']) }}"
+                        :class="tab === 'competences' ? 'bg-[#111] text-white font-bold shadow-sm' : 'text-neutral-600 hover:text-[#111] hover:bg-[#F7F7F8] font-medium'"
+                        class="w-full flex items-center justify-between px-3 py-2 rounded-xl text-xs transition-colors duration-150 text-left cursor-pointer {{ ($activeTab ?? '') === 'competences' ? 'bg-[#111] text-white font-bold shadow-sm' : 'text-neutral-600 hover:text-[#111] hover:bg-[#F7F7F8] font-medium' }}"
                     >
-                        <div class="flex items-center gap-3">
-                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4M7.835 4.697a3.42 3.42 0 001.946-.806 3.42 3.42 0 014.438 0 3.42 3.42 0 001.946.806 3.42 3.42 0 013.138 3.138 3.42 3.42 0 00.806 1.946 3.42 3.42 0 010 4.438 3.42 3.42 0 00-.806 1.946 3.42 3.42 0 01-3.138 3.138 3.42 3.42 0 00-1.946.806 3.42 3.42 0 01-4.438 0 3.42 3.42 0 00-1.946-.806 3.42 3.42 0 01-3.138-3.138 3.42 3.42 0 00-.806-1.946 3.42 3.42 0 010-4.438 3.42 3.42 0 00.806-1.946 3.42 3.42 0 013.138-3.138z"/></svg>
+                        <div class="flex items-center gap-2.5">
+                            <svg class="w-4 h-4" :class="tab === 'competences' ? 'text-[#FFB800]' : 'text-neutral-400'" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4M7.835 4.697a3.42 3.42 0 001.946-.806 3.42 3.42 0 014.438 0 3.42 3.42 0 001.946.806 3.42 3.42 0 013.138 3.138 3.42 3.42 0 00.806 1.946 3.42 3.42 0 010 4.438 3.42 3.42 0 00-.806 1.946 3.42 3.42 0 01-3.138 3.138 3.42 3.42 0 00-1.946.806 3.42 3.42 0 01-4.438 0 3.42 3.42 0 00-1.946-.806 3.42 3.42 0 01-3.138-3.138 3.42 3.42 0 00-.806-1.946 3.42 3.42 0 010-4.438 3.42 3.42 0 00.806-1.946 3.42 3.42 0 013.138-3.138z"/></svg>
                             <span>Mes compétences</span>
                         </div>
-                        <span class="text-[10px] text-emerald-700 font-bold">★ Vérifié</span>
-                    </button>
+                        <span class="text-[10px] text-emerald-700 font-bold bg-emerald-50 px-1.5 py-0.5 rounded-full border border-emerald-100">★ Vérifié</span>
+                    </a>
 
                     <!-- 4. Mon profil public -->
-                    <button 
-                        @click="tab = 'profil'; mobileMenuOpen = false"
-                        :class="tab === 'profil' ? 'bg-[#FFB515] text-black font-extrabold shadow-sm' : 'text-neutral-600 hover:text-black hover:bg-neutral-50 font-medium'"
-                        class="w-full flex items-center justify-between px-3.5 py-2.5 rounded-2xl text-xs transition-all duration-150 text-left"
+                    <a 
+                        href="{{ route('candidat.dashboard', ['tab' => 'profil']) }}"
+                        :class="tab === 'profil' ? 'bg-[#111] text-white font-bold shadow-sm' : 'text-neutral-600 hover:text-[#111] hover:bg-[#F7F7F8] font-medium'"
+                        class="w-full flex items-center justify-between px-3 py-2 rounded-xl text-xs transition-colors duration-150 text-left cursor-pointer {{ ($activeTab ?? '') === 'profil' ? 'bg-[#111] text-white font-bold shadow-sm' : 'text-neutral-600 hover:text-[#111] hover:bg-[#F7F7F8] font-medium' }}"
                     >
-                        <div class="flex items-center gap-3">
-                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"/></svg>
+                        <div class="flex items-center gap-2.5">
+                            <svg class="w-4 h-4" :class="tab === 'profil' ? 'text-[#FFB800]' : 'text-neutral-400'" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"/></svg>
                             <span>Mon profil public</span>
                         </div>
-                    </button>
+                    </a>
 
                     <!-- 5. Mes réalisations -->
-                    <button 
-                        @click="tab = 'realisations'; mobileMenuOpen = false"
-                        :class="tab === 'realisations' ? 'bg-[#FFB515] text-black font-extrabold shadow-sm' : 'text-neutral-600 hover:text-black hover:bg-neutral-50 font-medium'"
-                        class="w-full flex items-center justify-between px-3.5 py-2.5 rounded-2xl text-xs transition-all duration-150 text-left"
+                    <a 
+                        href="{{ route('candidat.dashboard', ['tab' => 'realisations']) }}"
+                        :class="tab === 'realisations' ? 'bg-[#111] text-white font-bold shadow-sm' : 'text-neutral-600 hover:text-[#111] hover:bg-[#F7F7F8] font-medium'"
+                        class="w-full flex items-center justify-between px-3 py-2 rounded-xl text-xs transition-colors duration-150 text-left cursor-pointer {{ ($activeTab ?? '') === 'realisations' ? 'bg-[#111] text-white font-bold shadow-sm' : 'text-neutral-600 hover:text-[#111] hover:bg-[#F7F7F8] font-medium' }}"
                     >
-                        <div class="flex items-center gap-3">
-                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg>
+                        <div class="flex items-center gap-2.5">
+                            <svg class="w-4 h-4" :class="tab === 'realisations' ? 'text-[#FFB800]' : 'text-neutral-400'" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg>
                             <span>Mes réalisations</span>
                         </div>
                         <span class="text-[10px] text-neutral-400 font-bold">{{ count($realizations ?? []) }}</span>
-                    </button>
+                    </a>
 
                     <!-- 6. Notifications -->
-                    <button 
-                        @click="tab = 'notifications'; mobileMenuOpen = false"
-                        :class="tab === 'notifications' ? 'bg-[#FFB515] text-black font-extrabold shadow-sm' : 'text-neutral-600 hover:text-black hover:bg-neutral-50 font-medium'"
-                        class="w-full flex items-center justify-between px-3.5 py-2.5 rounded-2xl text-xs transition-all duration-150 text-left"
+                    <a 
+                        href="{{ route('candidat.dashboard', ['tab' => 'notifications']) }}" 
+                        :class="tab === 'notifications' ? 'bg-[#111] text-white font-bold shadow-sm' : 'text-neutral-600 hover:text-[#111] hover:bg-[#F7F7F8] font-medium'"
+                        class="w-full flex items-center justify-between px-3 py-2 rounded-xl text-xs transition-colors duration-150 text-left cursor-pointer {{ ($activeTab ?? '') === 'notifications' ? 'bg-[#111] text-white font-bold shadow-sm' : 'text-neutral-600 hover:text-[#111] hover:bg-[#F7F7F8] font-medium' }}"
                     >
-                        <div class="flex items-center gap-3">
-                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9"/></svg>
+                        <div class="flex items-center gap-2.5">
+                            <svg class="w-4 h-4" :class="tab === 'notifications' ? 'text-[#FFB800]' : 'text-neutral-400'" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9"/></svg>
                             <span>Notifications</span>
                         </div>
                         <span class="w-2 h-2 rounded-full bg-rose-500"></span>
-                    </button>
+                    </a>
 
                     <!-- 7. Paramètres du compte -->
-                    <button 
-                        @click="tab = 'parametres'; mobileMenuOpen = false"
-                        :class="tab === 'parametres' ? 'bg-[#FFB515] text-black font-extrabold shadow-sm' : 'text-neutral-600 hover:text-black hover:bg-neutral-50 font-medium'"
-                        class="w-full flex items-center justify-between px-3.5 py-2.5 rounded-2xl text-xs transition-all duration-150 text-left"
+                    <a 
+                        href="{{ route('candidat.dashboard', ['tab' => 'parametres']) }}" 
+                        :class="tab === 'parametres' ? 'bg-[#111] text-white font-bold shadow-sm' : 'text-neutral-600 hover:text-[#111] hover:bg-[#F7F7F8] font-medium'"
+                        class="w-full flex items-center justify-between px-3 py-2 rounded-xl text-xs transition-colors duration-150 text-left cursor-pointer {{ ($activeTab ?? '') === 'parametres' ? 'bg-[#111] text-white font-bold shadow-sm' : 'text-neutral-600 hover:text-[#111] hover:bg-[#F7F7F8] font-medium' }}"
                     >
-                        <div class="flex items-center gap-3">
-                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/></svg>
+                        <div class="flex items-center gap-2.5">
+                            <svg class="w-4 h-4" :class="tab === 'parametres' ? 'text-[#FFB800]' : 'text-neutral-400'" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/></svg>
                             <span>Paramètres du compte</span>
                         </div>
-                    </button>
+                    </a>
 
                     <!-- SECTION SÉPARATION : MODULES OPÉRATIONNELS COMPLÉMENTAIRES -->
-                    <div class="text-[10px] font-black uppercase tracking-wider text-neutral-400 px-3 pt-4">Gestion & Confiance</div>
+                    <div class="text-[10px] font-bold uppercase tracking-wider text-neutral-400 px-3 pt-3 font-mono">Gestion & Confiance</div>
 
                     <!-- 8 & 9. Mes devis & missions -->
-                    <button 
-                        @click="tab = 'devis_missions'; mobileMenuOpen = false"
-                        :class="tab === 'devis_missions' ? 'bg-[#FFB515] text-black font-extrabold shadow-sm' : 'text-neutral-600 hover:text-black hover:bg-neutral-50 font-medium'"
-                        class="w-full flex items-center justify-between px-3.5 py-2.5 rounded-2xl text-xs transition-all duration-150 text-left"
+                    <a 
+                        href="{{ route('candidat.dashboard', ['tab' => 'devis_missions']) }}"
+                        :class="tab === 'devis_missions' ? 'bg-[#111] text-white font-bold shadow-sm' : 'text-neutral-600 hover:text-[#111] hover:bg-[#F7F7F8] font-medium'"
+                        class="w-full flex items-center justify-between px-3 py-2 rounded-xl text-xs transition-colors duration-150 text-left cursor-pointer {{ ($activeTab ?? '') === 'devis_missions' ? 'bg-[#111] text-white font-bold shadow-sm' : 'text-neutral-600 hover:text-[#111] hover:bg-[#F7F7F8] font-medium' }}"
                     >
-                        <div class="flex items-center gap-3">
-                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg>
+                        <div class="flex items-center gap-2.5">
+                            <svg class="w-4 h-4" :class="tab === 'devis_missions' ? 'text-[#FFB800]' : 'text-neutral-400'" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg>
                             <span>Mes devis & missions</span>
                         </div>
                         <span class="text-[10px] font-mono text-neutral-500 font-bold">{{ count($quotes ?? []) }} dev.</span>
-                    </button>
+                    </a>
 
                     <!-- 10. Avis clients -->
-                    <button 
-                        @click="tab = 'avis'; mobileMenuOpen = false"
-                        :class="tab === 'avis' ? 'bg-[#FFB515] text-black font-extrabold shadow-sm' : 'text-neutral-600 hover:text-black hover:bg-neutral-50 font-medium'"
-                        class="w-full flex items-center justify-between px-3.5 py-2.5 rounded-2xl text-xs transition-all duration-150 text-left"
+                    <a 
+                        href="{{ route('candidat.dashboard', ['tab' => 'avis']) }}"
+                        :class="tab === 'avis' ? 'bg-[#111] text-white font-bold shadow-sm' : 'text-neutral-600 hover:text-[#111] hover:bg-[#F7F7F8] font-medium'"
+                        class="w-full flex items-center justify-between px-3 py-2 rounded-xl text-xs transition-colors duration-150 text-left cursor-pointer {{ ($activeTab ?? '') === 'avis' ? 'bg-[#111] text-white font-bold shadow-sm' : 'text-neutral-600 hover:text-[#111] hover:bg-[#F7F7F8] font-medium' }}"
                     >
-                        <div class="flex items-center gap-3">
-                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11.049 2.927c.3-.921 1.603-.921 1.902 0l1.519 4.674a1 1 0 00.95.69h4.915c.969 0 1.371 1.24.588 1.81l-3.976 2.888a1 1 0 00-.363 1.118l1.518 4.674c.3.922-.755 1.688-1.538 1.118l-3.976-2.888a1 1 0 00-1.176 0l-3.976 2.888c-.783.57-1.838-.197-1.538-1.118l1.518-4.674a1 1 0 00-.363-1.118l-3.976-2.888c-.784-.57-.38-1.81.588-1.81h4.914a1 1 0 00.951-.69l1.519-4.674z"/></svg>
+                        <div class="flex items-center gap-2.5">
+                            <svg class="w-4 h-4" :class="tab === 'avis' ? 'text-[#FFB800]' : 'text-neutral-400'" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11.049 2.927c.3-.921 1.603-.921 1.902 0l1.519 4.674a1 1 0 00.95.69h4.915c.969 0 1.371 1.24.588 1.81l-3.976 2.888a1 1 0 00-.363 1.118l1.518 4.674c.3.922-.755 1.688-1.538 1.118l-3.976-2.888a1 1 0 00-1.176 0l-3.976 2.888c-.783.57-1.838-.197-1.538-1.118l1.518-4.674a1 1 0 00-.363-1.118l-3.976-2.888c-.784-.57-.38-1.81.588-1.81h4.914a1 1 0 00.951-.69l1.519-4.674z"/></svg>
                             <span>Avis clients vérifiés</span>
                         </div>
-                        <span class="text-[10px] text-amber-600 font-extrabold">{{ count($reviews ?? []) > 0 ? '5.0 ★' : '—' }}</span>
-                    </button>
+                        <span class="text-[10px] text-amber-600 font-bold">{{ count($reviews ?? []) > 0 ? '5.0 ★' : '—' }}</span>
+                    </a>
 
                     <!-- 11. Statistiques -->
-                    <button 
-                        @click="tab = 'stats'; mobileMenuOpen = false"
-                        :class="tab === 'stats' ? 'bg-[#FFB515] text-black font-extrabold shadow-sm' : 'text-neutral-600 hover:text-black hover:bg-neutral-50 font-medium'"
-                        class="w-full flex items-center justify-between px-3.5 py-2.5 rounded-2xl text-xs transition-all duration-150 text-left"
+                    <a 
+                        href="{{ route('candidat.dashboard', ['tab' => 'stats']) }}"
+                        :class="tab === 'stats' ? 'bg-[#111] text-white font-bold shadow-sm' : 'text-neutral-600 hover:text-[#111] hover:bg-[#F7F7F8] font-medium'"
+                        class="w-full flex items-center justify-between px-3 py-2 rounded-xl text-xs transition-colors duration-150 text-left cursor-pointer {{ ($activeTab ?? '') === 'stats' ? 'bg-[#111] text-white font-bold shadow-sm' : 'text-neutral-600 hover:text-[#111] hover:bg-[#F7F7F8] font-medium' }}"
                     >
-                        <div class="flex items-center gap-3">
-                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"/></svg>
+                        <div class="flex items-center gap-2.5">
+                            <svg class="w-4 h-4" :class="tab === 'stats' ? 'text-[#FFB800]' : 'text-neutral-400'" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"/></svg>
                             <span>Statistiques d'activité</span>
                         </div>
-                    </button>
+                    </a>
                 </nav>
             </div>
 
-            <!-- CARTE DU CENTRE D'ASSISTANCE (INSPIRÉE DE LA MAQUETTE RÉFÉRENCE) -->
-            <div class="mt-6 pt-4 border-t border-neutral-100">
-                <div class="relative bg-[#111111] text-white p-4 rounded-3xl shadow-md overflow-hidden text-center">
-                    <div class="w-10 h-10 rounded-full bg-[#FFB515] text-black font-black text-sm flex items-center justify-center mx-auto -mt-1 mb-2.5 shadow-sm">
+            <!-- CARTE DU CENTRE D'ASSISTANCE -->
+            <div class="mt-4 pt-3 border-t border-neutral-100">
+                <div class="relative bg-[#111] text-white p-3.5 rounded-[14px] overflow-hidden text-center">
+                    <div class="w-8 h-8 rounded-lg bg-[#FFB800] text-[#111] font-black text-xs flex items-center justify-center mx-auto mb-2 font-mono">
                         ?
                     </div>
-                    <div class="font-black text-xs text-white">Centre d'assistance</div>
+                    <div class="font-bold text-xs text-white">Centre d'assistance</div>
                     <p class="text-[11px] text-neutral-400 mt-1 leading-snug">
                         Une difficulté avec un client ou une question technique ?
                     </p>
                     <button 
                         @click="showHelpModal = true"
-                        class="mt-3 w-full py-2 bg-white text-black hover:bg-[#FFB515] text-[11px] font-extrabold rounded-2xl transition-all"
+                        class="mt-2.5 w-full py-1.5 bg-white text-[#111] hover:bg-[#FFB800] text-[11px] font-bold rounded-lg transition-colors cursor-pointer"
                     >
                         Contacter le support
                     </button>
-                </div>
-
-                <div class="mt-3 flex items-center justify-between px-2 pt-2 text-[11px]">
-                    <span class="text-neutral-400">Session active</span>
-                    <form action="{{ route('candidat.logout') }}" method="POST">
-                        @csrf
-                        <button type="submit" class="text-rose-600 hover:text-rose-800 font-bold flex items-center gap-1">
-                            <span>Déconnexion</span>
-                            <span>↳</span>
-                        </button>
-                    </form>
                 </div>
             </div>
         </aside>
@@ -329,108 +397,107 @@
         ></div>
 
         <!-- ============================================================== -->
-        <!-- COLONNE 2 : CONTENU PRINCIPAL (DASHBOARD & BACK-OFFICE)        -->
+        <!-- COLONNE 2 : CONTENU PRINCIPAL (SCROLL NORMAL)                   -->
         <!-- ============================================================== -->
-        <main class="flex-1 min-w-0 flex flex-col gap-6">
+        <div class="lg:ml-64 flex-1 flex flex-col min-h-screen">
 
-            <!-- BARRE SUPÉRIEURE DE NAVIGATION ET RECHERCHE -->
-            <header class="bg-white rounded-3xl p-4 lg:p-5 border border-[#E8E5DC] shadow-sm flex flex-col md:flex-row items-center justify-between gap-4">
-                <div class="flex items-center justify-between w-full md:w-auto gap-4">
-                    <button @click="mobileMenuOpen = true" class="lg:hidden p-2 rounded-xl bg-neutral-100 text-neutral-700 hover:bg-neutral-200">
+            <!-- BARRE SUPÉRIEURE DE NAVIGATION ET RECHERCHE (STICKY) -->
+            <header class="sticky top-0 z-30 bg-white/95 backdrop-blur-sm border-b border-neutral-200/80 px-4 sm:px-6 py-3 flex items-center justify-between gap-4">
+                <div class="flex items-center gap-3">
+                    <button @click="mobileMenuOpen = true" class="lg:hidden p-2 rounded-xl bg-neutral-100 text-neutral-700 hover:bg-neutral-200" title="Menu">
                         <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"/></svg>
                     </button>
 
                     <div>
                         <div class="flex items-center gap-2">
-                            <h1 class="text-lg md:text-xl font-black text-black">
+                            <h1 class="text-base sm:text-lg font-bold text-[#111]">
                                 Bonjour {{ explode(' ', $candidate->full_name)[0] }} 👋
                             </h1>
-                            <span class="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-extrabold {{ $candidate->getStatusBadgeClass() }}">
+                            <span class="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-bold {{ $candidate->getStatusBadgeClass() }}">
                                 {{ $candidate->getStatusLabel() }}
                             </span>
                         </div>
-                        <p class="text-xs text-neutral-500 mt-0.5">Voici le récapitulatif de votre activité et vos opportunités de la semaine.</p>
+                        <p class="text-[11px] text-neutral-400 hidden sm:block">Voici le récapitulatif de votre activité et vos opportunités de la semaine.</p>
                     </div>
-
-                    <!-- Bouton pour voir le profil sur mobile -->
-                    <button @click="tab = 'profil'" title="Mon profil" class="lg:hidden p-1 rounded-2xl border border-neutral-200 hover:border-black transition-colors">
-                        @if ($candidate->profile_photo)
-                            <img src="{{ $candidate->profile_photo }}" alt="{{ $candidate->full_name }}" class="w-8 h-8 rounded-full object-cover">
-                        @else
-                            <div class="w-8 h-8 rounded-full bg-[#FFB515] text-black font-extrabold flex items-center justify-center text-xs">
-                                {{ substr($candidate->full_name, 0, 2) }}
-                            </div>
-                        @endif
-                    </button>
                 </div>
 
                 <!-- RECHERCHE & CONTRÔLES RAPIDES -->
-                <div class="flex items-center gap-3 w-full md:w-auto">
-                    <div class="relative flex-1 md:w-64 lg:w-72">
+                <div class="flex items-center gap-2.5">
+                    <div class="relative w-40 sm:w-56 md:w-64">
                         <input 
                             type="text" 
                             x-model="searchQuery" 
-                            placeholder="Rechercher une demande, un projet..." 
-                            class="w-full h-11 pl-10 pr-4 bg-[#FAF8F2] border border-[#E8E5DC] rounded-2xl text-xs text-neutral-800 placeholder-neutral-400 focus:outline-none focus:border-black focus:bg-white transition-all"
+                            placeholder="Rechercher..." 
+                            class="w-full h-8 pl-8 pr-3 bg-[#F7F7F8] border border-neutral-200/80 rounded-lg text-xs text-[#111] placeholder-neutral-400 focus:outline-none focus:border-[#111] focus:bg-white transition-all"
                         >
-                        <svg class="w-4 h-4 text-neutral-400 absolute left-3.5 top-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/></svg>
+                        <svg class="w-3.5 h-3.5 text-neutral-400 absolute left-2.5 top-2.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/></svg>
                     </div>
 
                     <!-- BOUTON NOTIFICATION RAPIDE -->
-                    <button 
-                        @click="tab = 'notifications'" 
-                        class="relative w-11 h-11 rounded-2xl bg-[#FAF8F2] hover:bg-neutral-100 border border-[#E8E5DC] flex items-center justify-center text-neutral-700 transition-all shrink-0"
+                    <a 
+                        href="{{ route('candidat.dashboard', ['tab' => 'notifications']) }}" 
+                        class="relative w-8 h-8 rounded-lg bg-[#F7F7F8] hover:bg-neutral-100 border border-neutral-200/80 flex items-center justify-center text-neutral-600 transition-all shrink-0 cursor-pointer"
                         title="Voir les notifications"
                     >
-                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9"/></svg>
-                        <span class="absolute top-2.5 right-2.5 w-2 h-2 rounded-full bg-rose-500 ring-2 ring-white"></span>
-                    </button>
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9"/></svg>
+                        <span class="absolute top-1.5 right-1.5 w-2 h-2 rounded-full bg-rose-500 ring-2 ring-white"></span>
+                    </a>
+
+                    <!-- BOUTON DÉCONNEXION (icône logout rouge discret à côté de la cloche) -->
+                    <form action="{{ route('candidat.logout') }}" method="POST" class="inline-flex">
+                        @csrf
+                        <button 
+                            type="submit" 
+                            class="w-8 h-8 rounded-lg bg-[#F7F7F8] hover:bg-rose-50 border border-neutral-200/80 hover:border-rose-200 flex items-center justify-center text-rose-500 hover:text-rose-600 transition-all shrink-0 cursor-pointer"
+                            title="Déconnexion"
+                        >
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"/>
+                            </svg>
+                        </button>
+                    </form>
                 </div>
             </header>
+
+            <!-- CONTENU DES ONGLETS -->
+            <main class="flex-1 p-4 sm:p-6 lg:p-8 space-y-6 max-w-[1400px] w-full">
 
             <!-- ============================================================== -->
             <!-- 1. VUE TABLEAU DE BORD (PAR DÉFAUT)                            -->
             <!-- ============================================================== -->
             <div x-show="tab === 'dashboard'" x-cloak class="space-y-6">
 
-                <!-- SECTION 1 : LES 3 GRANDES CARTES HORIZONTALES (INSPIRÉES DU MOCKUP COURSES) -->
+                <!-- SECTION 1 : LES 3 GRANDES CARTES HORIZONTALES -->
                 <div class="space-y-3">
                     <div class="flex items-center justify-between">
-                        <div>
-                            <h2 class="text-base font-black text-black">Aperçu Stratégique</h2>
-                            <p class="text-xs text-neutral-500">Statut de qualification, opportunités entrantes et réputation.</p>
-                        </div>
-                        <button @click="tab = 'demandes'" class="text-xs font-bold text-neutral-700 hover:text-black hover:underline flex items-center gap-1">
+                        <h2 class="text-base font-bold text-[#111]">Aperçu Stratégique</h2>
+                        <a href="{{ route('candidat.dashboard', ['tab' => 'demandes']) }}" class="text-xs font-bold text-neutral-700 hover:text-[#111] flex items-center gap-1 cursor-pointer">
                             <span>Voir tout</span>
                             <span>→</span>
-                        </button>
+                        </a>
                     </div>
 
                     <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
                         <!-- Carte 1 : Niveau de qualification & certification -->
-                        <div class="bg-white rounded-3xl p-5 border border-[#E8E5DC] shadow-sm hover:shadow-md transition-all flex flex-col justify-between">
+                        <div class="bg-white rounded-[16px] p-5 border border-neutral-200/80 shadow-[0_1px_3px_rgba(0,0,0,0.02)] flex flex-col justify-between h-full">
                             <div>
-                                <div class="flex items-start justify-between gap-3 mb-3">
-                                    <div class="w-11 h-11 rounded-2xl bg-[#FFF9EC] border border-[#FFE7A3] text-black font-black flex items-center justify-center text-lg">
+                                <div class="flex items-center justify-between mb-3">
+                                    <div class="w-8 h-8 rounded-lg bg-neutral-100 flex items-center justify-center text-[#111] text-sm">
                                         ★
                                     </div>
-                                    <span class="px-2.5 py-0.5 rounded-full text-[10px] font-extrabold bg-emerald-50 text-emerald-800 border border-emerald-200">
+                                    <span class="px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-50 text-emerald-700 border border-emerald-200">
                                         Profil Certifié
                                     </span>
                                 </div>
-                                <h3 class="font-black text-sm text-black">Audit des Compétences</h3>
-                                <p class="text-xs text-neutral-500 mt-0.5 truncate">{{ $candidate->job_title }}</p>
+                                <span class="text-[11px] font-semibold uppercase tracking-wider text-neutral-400 font-mono block">Audit des Compétences</span>
+                                <div class="text-[24px] font-bold text-[#111] leading-none my-1 font-heading">{{ $candidate->score }}/100</div>
                             </div>
 
                             <div class="mt-4 pt-3 border-t border-neutral-100">
-                                <div class="flex items-center justify-between text-xs font-mono mb-1.5">
-                                    <span class="text-neutral-500">Score de conformité</span>
-                                    <span class="font-extrabold text-black">{{ $candidate->score }}/100</span>
+                                <div class="w-full h-1 bg-neutral-100 rounded-full overflow-hidden mb-2.5">
+                                    <div class="h-full bg-[#FFB800] rounded-full" style="width: {{ max(15, min(100, $candidate->score)) }}%"></div>
                                 </div>
-                                <div class="w-full h-2 bg-neutral-100 rounded-full overflow-hidden">
-                                    <div class="h-full bg-[#FFB515] rounded-full" style="width: {{ max(15, min(100, $candidate->score)) }}%"></div>
-                                </div>
-                                <div class="flex items-center justify-between text-[11px] text-neutral-500 mt-2">
+                                <div class="flex items-center justify-between text-[11px] text-neutral-500">
                                     <span>6 critères officiels</span>
                                     <span class="text-emerald-700 font-bold">100% vérifié</span>
                                 </div>
@@ -438,111 +505,110 @@
                         </div>
 
                         <!-- Carte 2 : Opportunités & Demandes de projets -->
-                        <div class="bg-white rounded-3xl p-5 border border-[#E8E5DC] shadow-sm hover:shadow-md transition-all flex flex-col justify-between">
+                        <div class="bg-white rounded-[16px] p-5 border border-neutral-200/80 shadow-[0_1px_3px_rgba(0,0,0,0.02)] flex flex-col justify-between h-full">
                             <div>
-                                <div class="flex items-start justify-between gap-3 mb-3">
-                                    <div class="w-11 h-11 rounded-2xl bg-blue-50 border border-blue-200 text-blue-700 font-black flex items-center justify-center text-base">
+                                <div class="flex items-center justify-between mb-3">
+                                    <div class="w-8 h-8 rounded-lg bg-neutral-100 flex items-center justify-center text-[#111] text-sm">
                                         💼
                                     </div>
-                                    <span class="px-2.5 py-0.5 rounded-full text-[10px] font-extrabold bg-[#FFF9EC] text-amber-900 border border-[#FFE7A3]">
-                                        {{ count($projectRequests['nouvelles'] ?? []) }} Nouvelles demandes
+                                    <span class="px-2 py-0.5 rounded-full text-[10px] font-bold {{ $stats['to_process_count'] > 0 ? 'bg-amber-50 text-amber-900 border border-amber-200' : 'bg-neutral-100 text-neutral-600 border border-neutral-200' }}">
+                                        {{ $stats['to_process_count'] }} à traiter
                                     </span>
                                 </div>
-                                <h3 class="font-black text-sm text-black">Opportunités Entrantes</h3>
-                                <p class="text-xs text-neutral-500 mt-0.5">Demandes clients reçues cette semaine</p>
+                                <span class="text-[11px] font-semibold uppercase tracking-wider text-neutral-400 font-mono block">Centre d'Opportunités</span>
+                                <div class="text-[24px] font-bold text-[#111] leading-none my-1 font-heading">
+                                    {{ $stats['total_requests'] }} <span class="text-xs font-medium text-neutral-500">demande(s) attribuée(s) au total</span>
+                                </div>
                             </div>
 
                             <div class="mt-4 pt-3 border-t border-neutral-100">
-                                <div class="flex items-center justify-between text-xs font-mono mb-1.5">
+                                <div class="flex items-center justify-between text-[11px] font-mono mb-1">
                                     <span class="text-neutral-500">Taux de réponse</span>
-                                    <span class="font-extrabold text-black">{{ $stats['response_rate'] }}</span>
+                                    <span class="font-bold text-[#111]">{{ $stats['response_rate'] }}</span>
                                 </div>
-                                <div class="w-full h-2 bg-neutral-100 rounded-full overflow-hidden">
-                                    <div class="h-full bg-emerald-500 rounded-full" style="width: 100%"></div>
+                                <div class="w-full h-1 bg-neutral-100 rounded-full overflow-hidden mb-2.5">
+                                    <div class="h-full bg-emerald-500 rounded-full" style="width: {{ (int) preg_replace('/[^0-9]/', '', $stats['response_rate']) ?: 10 }}%"></div>
                                 </div>
-                                <div class="flex items-center justify-between text-[11px] text-neutral-500 mt-2">
-                                    <span>Potentiel estimé</span>
-                                    <span class="text-black font-extrabold font-mono">730 000 FCFA</span>
+                                <div class="flex items-center justify-between text-[11px] text-neutral-500">
+                                    <span>Volume contractualisé</span>
+                                    <span class="text-[#111] font-bold font-mono">{{ $stats['total_earnings'] }}</span>
                                 </div>
                             </div>
                         </div>
 
                         <!-- Carte 3 : Réputation & Missions en cours -->
-                        <div class="bg-white rounded-3xl p-5 border border-[#E8E5DC] shadow-sm hover:shadow-md transition-all flex flex-col justify-between">
+                        <div class="bg-white rounded-[16px] p-5 border border-neutral-200/80 shadow-[0_1px_3px_rgba(0,0,0,0.02)] flex flex-col justify-between h-full">
                             <div>
-                                <div class="flex items-start justify-between gap-3 mb-3">
-                                    <div class="w-11 h-11 rounded-2xl bg-purple-50 border border-purple-200 text-purple-700 font-black flex items-center justify-center text-base">
+                                <div class="flex items-center justify-between mb-3">
+                                    <div class="w-8 h-8 rounded-lg bg-neutral-100 flex items-center justify-center text-[#111] text-sm">
                                         🎯
                                     </div>
-                                    <span class="px-2.5 py-0.5 rounded-full text-[10px] font-extrabold bg-purple-50 text-purple-800 border border-purple-200">
-                                        Missions en cours : {{ count($projectRequests['en_cours'] ?? []) }}
+                                    <span class="px-2 py-0.5 rounded-full text-[10px] font-bold bg-neutral-100 text-neutral-700 border border-neutral-200">
+                                        Missions en cours : {{ $stats['in_progress_count'] }}
                                     </span>
                                 </div>
-                                <h3 class="font-black text-sm text-black">Indice de Réputation</h3>
-                                <p class="text-xs text-neutral-500 mt-0.5">Basé sur les livraisons et avis vérifiés</p>
+                                <span class="text-[11px] font-semibold uppercase tracking-wider text-neutral-400 font-mono block">Indice de Réputation</span>
+                                <div class="text-[24px] font-bold text-[#111] leading-none my-1 font-heading">
+                                    {{ $stats['completed_count'] }} <span class="text-xs font-medium text-neutral-500">mission(s) livrée(s)</span>
+                                </div>
                             </div>
 
                             <div class="mt-4 pt-3 border-t border-neutral-100">
-                                <div class="flex items-center justify-between text-xs font-mono mb-1.5">
+                                <div class="flex items-center justify-between text-[11px] font-mono mb-1">
                                     <span class="text-neutral-500">Évaluation clients</span>
-                                    <span class="font-extrabold text-amber-600">5.0 / 5.0 ★</span>
+                                    <span class="font-bold text-[#111]">{{ $stats['avg_rating'] ?: '—' }}</span>
                                 </div>
-                                <div class="w-full h-2 bg-neutral-100 rounded-full overflow-hidden">
-                                    <div class="h-full bg-amber-500 rounded-full" style="width: 100%"></div>
+                                <div class="w-full h-1 bg-neutral-100 rounded-full overflow-hidden mb-2.5">
+                                    <div class="h-full bg-[#FFB800] rounded-full" style="width: {{ $stats['avg_rating_num'] ? round(($stats['avg_rating_num'] / 5) * 100) : 15 }}%"></div>
                                 </div>
-                                <div class="flex items-center justify-between text-[11px] text-neutral-500 mt-2">
-                                    <span>Garantie de livraison</span>
-                                    <span class="text-emerald-700 font-bold">100% à l'heure</span>
+                                <div class="flex items-center justify-between text-[11px] text-neutral-500">
+                                    <span>Projets terminés</span>
+                                    <span class="text-neutral-700 font-bold">{{ $stats['completed_count'] > 0 ? $stats['completed_count'] . ' clôturé(s)' : 'En attente' }}</span>
                                 </div>
                             </div>
                         </div>
                     </div>
                 </div>
 
-                <!-- SECTION 2 : DEMANDES DE PROJETS PRIORITAIRES (INSPIRÉ DU BLOC ASSIGNMENTS) -->
-                <div class="bg-white rounded-3xl p-5 lg:p-6 border border-[#E8E5DC] shadow-sm space-y-4">
+                <!-- SECTION 2 : DEMANDES DE PROJETS PRIORITAIRES -->
+                <div class="bg-white rounded-[16px] p-5 lg:p-6 border border-neutral-200/80 shadow-[0_1px_3px_rgba(0,0,0,0.02)] space-y-4">
                     <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-                        <div>
-                            <div class="flex items-center gap-2">
-                                <h2 class="text-base font-black text-black">Demandes Récentes à Traiter</h2>
-                                <span class="px-2 py-0.5 bg-[#FFB515] text-black font-extrabold text-[10px] rounded-full">
-                                    {{ count($projectRequests['nouvelles']) }} nouvelles
-                                </span>
-                            </div>
-                            <p class="text-xs text-neutral-500 mt-0.5">
-                                Consultez le brief, préparez votre proposition ou répondez pour engager l'échange.
-                            </p>
+                        <div class="flex items-center gap-2">
+                            <h2 class="text-base font-bold text-[#111]">Demandes Récentes à Traiter</h2>
+                            <span class="px-2 py-0.5 bg-[#FFB800] text-[#111] font-bold text-[10px] rounded-full">
+                                {{ count($projectRequests['nouvelles']) }} nouvelles
+                            </span>
                         </div>
 
-                        <button @click="tab = 'demandes'" class="text-xs font-bold text-neutral-800 hover:text-black flex items-center gap-1 self-start sm:self-auto">
+                        <a href="{{ route('candidat.dashboard', ['tab' => 'demandes']) }}" class="text-xs font-semibold text-neutral-600 hover:text-[#111] flex items-center gap-1 self-start sm:self-auto cursor-pointer">
                             <span>Accéder à toutes les demandes</span>
                             <span>→</span>
-                        </button>
+                        </a>
                     </div>
 
                     <!-- LISTE DES DEMANDES EN AVANT -->
                     <div class="space-y-3">
                         @forelse ($projectRequests['nouvelles'] as $req)
-                            <div class="p-4 rounded-2xl bg-[#FAF8F2] border border-[#E8E5DC] hover:border-black transition-all flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
+                            <div class="p-4 rounded-xl bg-[#F7F7F8] border border-neutral-200/70 hover:border-[#111] transition-all flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
                                 <div class="flex items-start gap-3.5">
-                                    <div class="w-12 h-12 rounded-2xl bg-black text-[#FFB515] font-black text-sm flex items-center justify-center shrink-0 shadow-sm">
+                                    <div class="w-10 h-10 rounded-xl bg-[#111] text-[#FFB800] font-bold text-xs flex items-center justify-center shrink-0 shadow-sm font-mono">
                                         {{ $req['client_avatar'] }}
                                     </div>
                                     <div>
                                         <div class="flex flex-wrap items-center gap-2">
-                                            <span class="font-extrabold text-xs text-black">{{ $req['client_name'] }}</span>
+                                            <span class="font-bold text-xs text-[#111]">{{ $req['client_name'] }}</span>
                                             <span class="px-2 py-0.5 rounded-full text-[10px] font-bold bg-white border border-neutral-200 text-neutral-700">
                                                 {{ $req['client_badge'] }}
                                             </span>
                                             <span class="text-[11px] text-neutral-400 font-mono">{{ $req['created_at_human'] }}</span>
                                         </div>
-                                        <h4 class="font-black text-sm text-neutral-900 mt-1">{{ $req['title'] }}</h4>
-                                        <div class="flex flex-wrap items-center gap-3 text-xs text-neutral-600 mt-1.5 font-mono">
-                                            <span class="text-neutral-900 font-bold bg-[#FFF9EC] px-2 py-0.5 rounded border border-[#FFE7A3]">
+                                        <h4 class="font-bold text-sm text-[#111] mt-0.5">{{ $req['title'] }}</h4>
+                                        <div class="flex flex-wrap items-center gap-3 text-xs text-neutral-600 mt-1 font-mono">
+                                            <span class="text-[#111] font-bold bg-[#FFB800]/15 px-2 py-0.5 rounded border border-[#FFB800]/30">
                                                 Budget : {{ $req['budget'] }}
                                             </span>
                                             <span>• Délai : {{ $req['deadline'] }}</span>
-                                            <span class="text-neutral-500">• {{ $req['category'] }}</span>
+                                            <span class="text-neutral-400">• {{ $req['category'] }}</span>
                                         </div>
                                     </div>
                                 </div>
@@ -550,88 +616,89 @@
                                 <div class="flex items-center gap-2 w-full md:w-auto shrink-0 justify-end">
                                     <button 
                                         @click="selectedRequest = {{ json_encode($req) }}; showBriefModal = true"
-                                        class="h-9 px-3.5 rounded-xl border border-neutral-300 hover:border-black text-xs font-bold text-neutral-800 hover:bg-white transition-all"
+                                        class="h-8 px-3 rounded-lg border border-neutral-300 hover:border-[#111] text-xs font-semibold text-neutral-700 hover:bg-white transition-all cursor-pointer"
                                     >
                                         Consulter le brief
                                     </button>
 
                                     <button 
-                                        @click="selectedRequest = {{ json_encode($req) }}; showBriefModal = true"
-                                        class="h-9 px-4 rounded-xl bg-black hover:bg-[#FFB515] hover:text-black text-white text-xs font-extrabold transition-all"
+                                        @click="selectedRequest = {{ json_encode($req) }}; briefActionType = 'accepter'; showBriefModal = true"
+                                        class="h-8 px-3.5 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold transition-all flex items-center gap-1.5 shadow-sm cursor-pointer"
                                     >
-                                        Consulter le brief / Décider
+                                        <span>✓</span>
+                                        <span>Accepter la mission</span>
                                     </button>
                                 </div>
                             </div>
                         @empty
-                            <div class="p-5 text-center bg-[#FAF8F2] rounded-2xl border border-neutral-200 text-xs text-neutral-500">
+                            <div class="p-6 text-center bg-[#F7F7F8] rounded-xl border border-neutral-200/60 text-xs text-neutral-500">
                                 <span>Aucune nouvelle demande en attente pour le moment. Votre profil reste actif et prêt à recevoir de nouveaux projets.</span>
                             </div>
                         @endforelse
                     </div>
                 </div>
 
-                <!-- SECTION 3 : ACTIONS PRIORITAIRES & TÂCHES (INSPIRÉES DU BLOC HOME TASKS DU MOCKUP) -->
+                <!-- SECTION 3 : ACTIONS PRIORITAIRES & TÂCHES -->
                 <div class="space-y-3">
                     <div class="flex items-center justify-between">
-                        <h2 class="text-base font-black text-black">Actions Prioritaires Recommandées</h2>
+                        <h2 class="text-base font-bold text-[#111]">Actions Prioritaires Recommandées</h2>
                         <span class="text-xs text-neutral-400">Pour maximiser vos contrats</span>
                     </div>
 
                     <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                        <!-- CARTE 1 : PRIORITÉ HAUTE (STYLE SOMBRE COMME LE MOCKUP) -->
-                        <div class="bg-[#111111] text-white rounded-3xl p-5 border border-neutral-800 shadow-md flex flex-col justify-between">
+                        <!-- CARTE 1 : NOIRE (VÉRIFICATION DE COMPÉTENCE) -->
+                        <div class="bg-[#111] text-white rounded-[16px] p-5 border border-neutral-800 shadow-sm flex flex-col justify-between">
                             <div>
                                 <div class="flex items-center justify-between mb-3">
                                     <span class="text-xs font-bold text-neutral-300 uppercase tracking-wider font-mono">Vérification de Compétence</span>
-                                    <span class="px-2.5 py-0.5 rounded-full text-[10px] font-black bg-[#FFB515] text-black">
+                                    <span class="px-2 py-0.5 rounded-full text-[10px] font-bold bg-[#FFB800] text-[#111]">
                                         Priorité Haute ↗
                                     </span>
                                 </div>
-                                <h3 class="text-base font-black text-white">Ajouter une démo technique</h3>
-                                <p class="text-xs text-neutral-300 mt-2 leading-relaxed">
+                                <h3 class="text-sm font-bold text-white">Ajouter une démo technique</h3>
+                                <p class="text-xs text-neutral-300 mt-1.5 leading-relaxed line-clamp-2">
                                     Le comité d'évaluation a mis en attente votre compétence « Déploiement Cloud & DevOps ». Fournissez une capture de pipeline ou un Dockerfile pour activer le badge expert.
                                 </p>
                             </div>
 
-                            <div class="mt-5 pt-3 border-t border-neutral-800 flex items-center justify-between">
+                            <div class="mt-4 pt-3 border-t border-neutral-800 flex items-center justify-between">
                                 <div class="text-[11px] text-neutral-400 font-mono">
                                     Échéance : Sous 48h
                                 </div>
-                                <button 
-                                    @click="tab = 'competences'"
-                                    class="h-8 px-3 rounded-xl bg-[#FFB515] hover:bg-[#E5A20C] text-black text-xs font-extrabold transition-all"
+                                <a 
+                                    href="{{ route('candidat.dashboard', ['tab' => 'competences']) }}"
+                                    class="h-8 px-3 rounded-lg bg-[#FFB800] hover:bg-[#E5A600] text-[#111] text-xs font-bold transition-all cursor-pointer flex items-center"
                                 >
                                     Compléter la preuve
-                                </button>
+                                </a>
                             </div>
                         </div>
 
-                        <!-- CARTE 2 : ACTION OPPORTUNITÉ (STYLE CHAUD ET DORÉ DU MOCKUP) -->
-                        <div class="bg-[#FFF9EC] rounded-3xl p-5 border border-[#FFE7A3] shadow-sm flex flex-col justify-between">
+                        <!-- CARTE 2 : BLANCHE (DISPONIBILITÉS IMMÉDIATES) -->
+                        <div class="bg-white text-[#111] rounded-[16px] p-5 border border-neutral-200/80 shadow-[0_1px_3px_rgba(0,0,0,0.02)] flex flex-col justify-between">
                             <div>
                                 <div class="flex items-center justify-between mb-3">
-                                    <span class="text-xs font-bold text-amber-900 uppercase tracking-wider font-mono">Disponibilités Immédiates</span>
-                                    <span class="px-2.5 py-0.5 rounded-full text-[10px] font-black bg-white border border-[#FFE7A3] text-amber-900">
+                                    <span class="text-xs font-bold text-neutral-500 uppercase tracking-wider font-mono">Disponibilités Immédiates</span>
+                                    <span class="px-2 py-0.5 rounded-full text-[10px] font-bold bg-neutral-100 border border-neutral-200 text-neutral-800">
                                         Opportunité ✦
                                     </span>
                                 </div>
-                                <h3 class="text-base font-black text-neutral-900">Confirmez votre planning de démarrage</h3>
-                                <p class="text-xs text-neutral-700 mt-2 leading-relaxed">
-                                    2 clients à Abidjan souhaitent contractualiser avant la fin de semaine. Confirmez vos créneaux pour leur permettre de verser l'acompte sous séquestre.
+                                <h3 class="text-sm font-bold text-[#111]">Confirmez votre planning de démarrage</h3>
+                                <p class="text-xs text-neutral-600 mt-1.5 leading-relaxed line-clamp-2">
+                                    2 clients à Abidjan souhaitent contractualiser avant la fin de semaine. Confirmez vos créneaux pour l'acompte.
                                 </p>
                             </div>
 
-                            <div class="mt-5 pt-3 border-t border-[#FFE7A3] flex items-center justify-between">
-                                <div class="text-[11px] text-amber-800 font-mono font-bold">
+                            <div class="mt-4 pt-3 border-t border-neutral-100 flex items-center justify-between">
+                                <div class="text-[11px] text-neutral-500 font-mono font-bold">
                                     Statut : Disponible
                                 </div>
-                                <button 
-                                    @click="tab = 'profil'"
-                                    class="h-8 px-3 rounded-xl bg-black hover:bg-[#FFB515] hover:text-black text-white text-xs font-extrabold transition-all"
+                                <a 
+                                    href="{{ route('candidat.dashboard', ['tab' => 'profil']) }}"
+                                    class="h-8 px-3 rounded-lg bg-[#111] hover:bg-neutral-800 text-white text-xs font-bold transition-all cursor-pointer flex items-center"
                                 >
                                     Actualiser le profil
-                                </button>
+                                </a>
                             </div>
                         </div>
                     </div>
@@ -640,194 +707,398 @@
             </div>
 
             <!-- ============================================================== -->
-            <!-- 2. VUE DEMANDES DE PROJETS (ORGANISATION DÉTAILLÉE DU USER)    -->
+            <!-- 2. VUE DEMANDES DE PROJETS (CENTRE DE GESTION DES OPPORTUNITÉS) -->
             <!-- ============================================================== -->
-            <div x-show="tab === 'demandes'" x-cloak class="space-y-6">
+            <div x-show="tab === 'demandes'" x-cloak class="space-y-4">
 
-                <!-- BANNIÈRE PÉDAGOGIQUE OBLIGATOIRE DU USER -->
-                <div class="bg-[#FFF9EC] border-l-4 border-[#FFB515] rounded-2xl p-4 sm:p-5 shadow-sm text-neutral-800">
-                    <div class="flex items-start gap-3">
-                        <span class="text-xl">⚠️</span>
-                        <div class="space-y-1">
-                            <h3 class="font-extrabold text-xs uppercase tracking-wider text-amber-900">
-                                Règle d'or Talent Club — Processus de contractualisation
-                            </h3>
-                            <p class="text-xs text-neutral-700 leading-relaxed">
-                                <strong>Attention :</strong> Une demande reçue n'est pas encore une commande confirmée. Un client peut simplement demander un devis ou des informations. Vous devez distinguer la demande initiale, votre accord technique / devis, et la confirmation effective avec acompte de la mission.
-                            </p>
+                <!-- EN-TÊTE PRINCIPAL : AFFAIRES & FLUX CLIENTS -->
+                <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                    <div>
+                        <div class="flex items-center gap-2">
+                            <span class="text-[10px] font-mono font-bold uppercase tracking-wider text-neutral-400">
+                                AFFAIRES & FLUX CLIENTS
+                            </span>
+                            <span class="text-neutral-300">•</span>
+                            <span class="text-xs text-neutral-500">Flux direct Talent Club</span>
                         </div>
+                        <h2 class="text-lg sm:text-xl font-bold text-[#111] mt-0.5">Centre de Gestion des Opportunités</h2>
+                    </div>
+                    <div class="flex items-center gap-2 shrink-0">
+                        <span class="px-3 py-1 rounded-lg bg-white border border-neutral-200/80 text-neutral-600 font-mono text-xs font-bold shadow-sm">
+                            Total : <strong class="text-[#111]">{{ $stats['total_requests'] }}</strong> opportunité{{ $stats['total_requests'] > 1 ? 's' : '' }}
+                        </span>
                     </div>
                 </div>
 
-                <!-- SOUS-ONGLETS DE CLASSEMENT CONFORMES AUX EXIGENCES DU USER -->
-                <div class="bg-white rounded-3xl p-5 border border-[#E8E5DC] shadow-sm space-y-5">
-                    <div class="flex flex-wrap items-center gap-2 border-b border-neutral-100 pb-4">
-                        <!-- Onglet 1 : Nouvelles demandes -->
+                <!-- BANDEAU ALERTE : TOAST JAUNE 1 LIGNE AVEC ICÔNE 📌 -->
+                <div class="bg-[#FFF9E6] border border-[#FFE58F] text-[#111] rounded-[12px] px-4 py-2.5 flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 text-xs shadow-sm">
+                    <div class="flex items-center gap-2 truncate">
+                        <span class="text-sm shrink-0">📌</span>
+                        <span class="font-bold text-[#111] uppercase tracking-wide text-[11px] sm:text-xs truncate">
+                            {{ is_array($stats['contextual_prompt']) ? ($stats['contextual_prompt']['title'] ?? '') : $stats['contextual_prompt'] }}
+                        </span>
+                        @if ($stats['last_response_formatted'])
+                            <span class="text-neutral-400 text-[11px] hidden sm:inline">•</span>
+                            <span class="text-neutral-600 text-[11px] hidden sm:inline">Dernière réponse enregistrée le <strong class="text-[#111] font-mono">{{ $stats['last_response_formatted'] }}</strong></span>
+                        @endif
+                    </div>
+                    @if ($stats['to_process_count'] > 0)
                         <button 
-                            @click="demandeFilter = 'nouvelles'"
-                            :class="demandeFilter === 'nouvelles' ? 'bg-black text-[#FFB515] font-black' : 'bg-neutral-100 text-neutral-700 hover:bg-neutral-200 font-bold'"
-                            class="px-4 py-2 rounded-2xl text-xs transition-all flex items-center gap-2"
+                            type="button"
+                            @click="demandeFilter = 'a_traiter'" 
+                            class="h-7 px-3 rounded-lg bg-[#111] hover:bg-neutral-800 text-white text-[11px] font-bold transition-all shrink-0 self-start sm:self-auto flex items-center gap-1 cursor-pointer"
                         >
-                            <span>Nouvelles demandes</span>
-                            <span class="px-1.5 py-0.2 rounded-full text-[10px] bg-[#FFB515] text-black">
-                                {{ count($projectRequests['nouvelles']) }}
-                            </span>
+                            <span>Traiter les priorités ({{ $stats['to_process_count'] }})</span>
+                            <span>→</span>
                         </button>
+                    @endif
+                </div>
 
-                        <!-- Onglet 2 : En attente de réponse -->
-                        <button 
-                            @click="demandeFilter = 'en_attente'"
-                            :class="demandeFilter === 'en_attente' ? 'bg-black text-[#FFB515] font-black' : 'bg-neutral-100 text-neutral-700 hover:bg-neutral-200 font-bold'"
-                            class="px-4 py-2 rounded-2xl text-xs transition-all flex items-center gap-2"
-                        >
-                            <span>En attente de réponse</span>
-                            <span class="px-1.5 py-0.2 rounded-full text-[10px] bg-neutral-200 text-black">
-                                {{ count($projectRequests['en_attente']) }}
-                            </span>
-                        </button>
+                <!-- 6 KPIS : UNE SEULE BARRE MINIMALISTE 6 COLONNES -->
+                <div class="bg-white rounded-[12px] border border-neutral-200/80 grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 divide-y sm:divide-y-0 sm:divide-x divide-neutral-100 overflow-hidden shadow-sm">
+                    <!-- 1. Total reçus -->
+                    <button 
+                        type="button"
+                        @click="demandeFilter = 'toutes'" 
+                        :class="demandeFilter === 'toutes' ? 'bg-[#F7F7F8]' : 'hover:bg-[#FAFAFA]'"
+                        class="p-3.5 text-left transition-colors cursor-pointer group"
+                    >
+                        <div class="flex items-center justify-between">
+                            <span class="text-[10px] font-mono font-bold uppercase tracking-wider text-neutral-400 group-hover:text-neutral-600">TOTAL REÇUS</span>
+                            <span class="text-xs">📥</span>
+                        </div>
+                        <div class="text-xl sm:text-2xl font-black font-mono text-[#111] mt-1">{{ $stats['total_requests'] }}</div>
+                    </button>
 
-                        <!-- Onglet 3 : Acceptées / en cours -->
-                        <button 
-                            @click="demandeFilter = 'en_cours'"
-                            :class="demandeFilter === 'en_cours' ? 'bg-black text-[#FFB515] font-black' : 'bg-neutral-100 text-neutral-700 hover:bg-neutral-200 font-bold'"
-                            class="px-4 py-2 rounded-2xl text-xs transition-all flex items-center gap-2"
-                        >
-                            <span>Acceptées / en cours</span>
-                            <span class="px-1.5 py-0.2 rounded-full text-[10px] bg-emerald-100 text-emerald-800">
-                                {{ count($projectRequests['en_cours']) }}
-                            </span>
-                        </button>
+                    <!-- 2. À traiter -->
+                    <button 
+                        type="button"
+                        @click="demandeFilter = 'a_traiter'" 
+                        :class="demandeFilter === 'a_traiter' ? 'bg-amber-50/50' : 'hover:bg-[#FAFAFA]'"
+                        class="p-3.5 text-left transition-colors cursor-pointer group"
+                    >
+                        <div class="flex items-center justify-between">
+                            <span class="text-[10px] font-mono font-bold uppercase tracking-wider text-neutral-400 group-hover:text-amber-700">À TRAITER</span>
+                            <span class="text-xs">⚡</span>
+                        </div>
+                        <div class="text-xl sm:text-2xl font-black font-mono {{ $stats['to_process_count'] > 0 ? 'text-amber-600' : 'text-[#111]' }} mt-1">
+                            {{ $stats['to_process_count'] }}
+                        </div>
+                    </button>
 
-                        <!-- Onglet 4 : Terminées / refusées -->
-                        <button 
-                            @click="demandeFilter = 'terminees'"
-                            :class="demandeFilter === 'terminees' ? 'bg-black text-[#FFB515] font-black' : 'bg-neutral-100 text-neutral-700 hover:bg-neutral-200 font-bold'"
-                            class="px-4 py-2 rounded-2xl text-xs transition-all flex items-center gap-2"
-                        >
-                            <span>Terminées / refusées</span>
-                            <span class="px-1.5 py-0.2 rounded-full text-[10px] bg-neutral-200 text-neutral-700">
-                                {{ count($projectRequests['terminees']) }}
-                            </span>
-                        </button>
+                    <!-- 3. Réponses envoyées -->
+                    <button 
+                        type="button"
+                        @click="demandeFilter = 'repondues'" 
+                        :class="demandeFilter === 'repondues' ? 'bg-sky-50/50' : 'hover:bg-[#FAFAFA]'"
+                        class="p-3.5 text-left transition-colors cursor-pointer group"
+                    >
+                        <div class="flex items-center justify-between">
+                            <span class="text-[10px] font-mono font-bold uppercase tracking-wider text-neutral-400 group-hover:text-sky-700">RÉPONSES ENVOYÉES</span>
+                            <span class="text-xs">✉️</span>
+                        </div>
+                        <div class="text-xl sm:text-2xl font-black font-mono text-[#111] mt-1">{{ $stats['responded_count'] }}</div>
+                    </button>
 
-                        <!-- Voir toutes -->
+                    <!-- 4. Acceptés -->
+                    <button 
+                        type="button"
+                        @click="demandeFilter = 'acceptees'" 
+                        :class="demandeFilter === 'acceptees' ? 'bg-emerald-50/50' : 'hover:bg-[#FAFAFA]'"
+                        class="p-3.5 text-left transition-colors cursor-pointer group"
+                    >
+                        <div class="flex items-center justify-between">
+                            <span class="text-[10px] font-mono font-bold uppercase tracking-wider text-neutral-400 group-hover:text-emerald-700">ACCEPTÉS</span>
+                            <span class="text-xs">✓</span>
+                        </div>
+                        <div class="text-xl sm:text-2xl font-black font-mono text-[#111] mt-1">{{ $stats['accepted_count'] }}</div>
+                    </button>
+
+                    <!-- 5. En cours -->
+                    <button 
+                        type="button"
+                        @click="demandeFilter = 'en_cours'" 
+                        :class="demandeFilter === 'en_cours' ? 'bg-[#FFB800]/10' : 'hover:bg-[#FAFAFA]'"
+                        class="p-3.5 text-left transition-colors cursor-pointer group"
+                    >
+                        <div class="flex items-center justify-between">
+                            <span class="text-[10px] font-mono font-bold uppercase tracking-wider text-neutral-400 group-hover:text-[#855B00]">EN COURS</span>
+                            <span class="text-xs">🚀</span>
+                        </div>
+                        <div class="text-xl sm:text-2xl font-black font-mono text-[#111] mt-1">{{ $stats['in_progress_count'] }}</div>
+                    </button>
+
+                    <!-- 6. Terminés -->
+                    <button 
+                        type="button"
+                        @click="demandeFilter = 'terminees'" 
+                        :class="demandeFilter === 'terminees' ? 'bg-neutral-100' : 'hover:bg-[#FAFAFA]'"
+                        class="p-3.5 text-left transition-colors cursor-pointer group"
+                    >
+                        <div class="flex items-center justify-between">
+                            <span class="text-[10px] font-mono font-bold uppercase tracking-wider text-neutral-400 group-hover:text-neutral-700">TERMINÉS</span>
+                            <span class="text-xs">🏁</span>
+                        </div>
+                        <div class="text-xl sm:text-2xl font-black font-mono text-[#111] mt-1">{{ $stats['completed_count'] }}</div>
+                    </button>
+                </div>
+
+                <!-- BARRE ACTIVITÉ : 1 LIGNE FINE SÉPARÉE PAR DES POINTS -->
+                <div class="flex flex-wrap items-center gap-x-2.5 gap-y-1 text-xs text-neutral-500 px-1">
+                    <span><strong class="text-[#111] font-mono font-bold">{{ $stats['this_month_count'] }}</strong> requ{{ $stats['this_month_count'] > 1 ? 's' : '' }}</span>
+                    <span class="text-neutral-300">•</span>
+                    <span>Taux <strong class="text-emerald-700 font-mono font-bold">{{ $stats['response_rate'] }}</strong></span>
+                    <span class="text-neutral-300">•</span>
+                    <span>Volume <strong class="text-[#111] font-mono font-bold">{{ $stats['total_earnings'] }}</strong></span>
+                    <span class="text-neutral-300">•</span>
+                    <span>Avis <strong class="text-amber-700 font-mono font-bold">{{ $stats['avg_rating'] ?: '-' }}</strong></span>
+                    <span class="text-neutral-300">•</span>
+                    <span>Dernière activité <strong class="text-neutral-800 font-medium">{{ $stats['last_activity_date'] ?? 'Récemment' }}</strong></span>
+                </div>
+
+                <!-- BARRE FILTRE + SEARCH BAR -->
+                <div class="flex flex-col lg:flex-row lg:items-center justify-between gap-3 pt-1">
+                    <!-- 7 CHIPS (GRIS CLAIR, ACTIVE EN NOIR) -->
+                    <div class="flex flex-wrap items-center gap-1.5">
                         <button 
+                            type="button"
                             @click="demandeFilter = 'toutes'"
-                            :class="demandeFilter === 'toutes' ? 'bg-neutral-800 text-white font-bold' : 'text-neutral-500 hover:text-black font-semibold'"
-                            class="ml-auto text-xs px-3 py-1.5 rounded-xl transition-all"
+                            :class="demandeFilter === 'toutes' ? 'bg-[#111] text-white shadow-sm' : 'bg-neutral-100 text-neutral-600 hover:bg-neutral-200'"
+                            class="px-3 py-1.5 rounded-lg text-xs font-semibold transition-all flex items-center gap-1.5 cursor-pointer"
                         >
-                            Tout afficher
+                            <span>Toutes</span>
+                            <span class="font-mono text-[10px] opacity-75">{{ $stats['total_requests'] }}</span>
+                        </button>
+
+                        <button 
+                            type="button"
+                            @click="demandeFilter = 'a_traiter'"
+                            :class="demandeFilter === 'a_traiter' ? 'bg-[#111] text-white shadow-sm' : 'bg-neutral-100 text-neutral-600 hover:bg-neutral-200'"
+                            class="px-3 py-1.5 rounded-lg text-xs font-semibold transition-all flex items-center gap-1.5 cursor-pointer"
+                        >
+                            <span>À traiter</span>
+                            <span class="font-mono text-[10px] opacity-75">{{ $stats['to_process_count'] }}</span>
+                        </button>
+
+                        <button 
+                            type="button"
+                            @click="demandeFilter = 'repondues'"
+                            :class="demandeFilter === 'repondues' ? 'bg-[#111] text-white shadow-sm' : 'bg-neutral-100 text-neutral-600 hover:bg-neutral-200'"
+                            class="px-3 py-1.5 rounded-lg text-xs font-semibold transition-all flex items-center gap-1.5 cursor-pointer"
+                        >
+                            <span>Réponses envoyées</span>
+                            <span class="font-mono text-[10px] opacity-75">{{ $stats['responded_count'] }}</span>
+                        </button>
+
+                        <button 
+                            type="button"
+                            @click="demandeFilter = 'acceptees'"
+                            :class="demandeFilter === 'acceptees' ? 'bg-[#111] text-white shadow-sm' : 'bg-neutral-100 text-neutral-600 hover:bg-neutral-200'"
+                            class="px-3 py-1.5 rounded-lg text-xs font-semibold transition-all flex items-center gap-1.5 cursor-pointer"
+                        >
+                            <span>Acceptées</span>
+                            <span class="font-mono text-[10px] opacity-75">{{ $stats['accepted_count'] }}</span>
+                        </button>
+
+                        <button 
+                            type="button"
+                            @click="demandeFilter = 'en_cours'"
+                            :class="demandeFilter === 'en_cours' ? 'bg-[#111] text-white shadow-sm' : 'bg-neutral-100 text-neutral-600 hover:bg-neutral-200'"
+                            class="px-3 py-1.5 rounded-lg text-xs font-semibold transition-all flex items-center gap-1.5 cursor-pointer"
+                        >
+                            <span>En cours</span>
+                            <span class="font-mono text-[10px] opacity-75">{{ $stats['in_progress_count'] }}</span>
+                        </button>
+
+                        <button 
+                            type="button"
+                            @click="demandeFilter = 'terminees'"
+                            :class="demandeFilter === 'terminees' ? 'bg-[#111] text-white shadow-sm' : 'bg-neutral-100 text-neutral-600 hover:bg-neutral-200'"
+                            class="px-3 py-1.5 rounded-lg text-xs font-semibold transition-all flex items-center gap-1.5 cursor-pointer"
+                        >
+                            <span>Terminées</span>
+                            <span class="font-mono text-[10px] opacity-75">{{ $stats['completed_count'] }}</span>
+                        </button>
+
+                        <button 
+                            type="button"
+                            @click="demandeFilter = 'annulees'"
+                            :class="demandeFilter === 'annulees' ? 'bg-[#111] text-white shadow-sm' : 'bg-neutral-100 text-neutral-600 hover:bg-neutral-200'"
+                            class="px-3 py-1.5 rounded-lg text-xs font-semibold transition-all flex items-center gap-1.5 cursor-pointer"
+                        >
+                            <span>Déclinées</span>
+                            <span class="font-mono text-[10px] opacity-75">{{ $stats['cancelled_count'] }}</span>
                         </button>
                     </div>
 
-                    <!-- LISTE DYNAMIQUE DES DEMANDES SELON LE FILTRE -->
-                    <div class="space-y-4">
-                        @php
-                            $allDemandes = array_merge(
-                                $projectRequests['nouvelles'],
-                                $projectRequests['en_attente'],
-                                $projectRequests['en_cours'],
-                                $projectRequests['terminees']
-                            );
-                        @endphp
+                    <!-- PETITE SEARCH BAR -->
+                    <div class="relative w-full lg:w-64">
+                        <input 
+                            type="text" 
+                            x-model="demandeSearch" 
+                            placeholder="Rechercher..." 
+                            class="w-full h-8 pl-8 pr-7 bg-white border border-neutral-200/80 rounded-lg text-xs text-[#111] placeholder-neutral-400 focus:outline-none focus:border-[#111] transition-all"
+                        >
+                        <svg class="w-3.5 h-3.5 text-neutral-400 absolute left-2.5 top-2.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/></svg>
+                        <button 
+                            x-show="demandeSearch" 
+                            @click="demandeSearch = ''" 
+                            class="absolute right-2.5 top-2 text-neutral-400 hover:text-black text-xs font-bold"
+                        >
+                            &times;
+                        </button>
+                    </div>
+                </div>
 
-                        @forelse ($allDemandes as $req)
-                            <div 
-                                x-show="demandeFilter === 'toutes' || demandeFilter === '{{ $req['status'] }}'"
-                                class="p-5 rounded-2xl bg-[#FAF8F2] border border-[#E8E5DC] hover:border-black transition-all space-y-4"
-                            >
-                                <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-neutral-200/60 pb-3">
-                                    <div class="flex items-center gap-3">
-                                        <div class="w-10 h-10 rounded-2xl bg-black text-[#FFB515] font-black text-xs flex items-center justify-center shrink-0">
-                                            {{ $req['client_avatar'] }}
-                                        </div>
-                                        <div>
-                                            <div class="font-bold text-xs text-black">{{ $req['client_name'] }}</div>
-                                            <div class="text-[11px] text-neutral-500">{{ $req['client_contact'] }}</div>
-                                        </div>
+                <!-- LISTE PROJETS : DESIGN LINEAR / NOTION (FOND BLANC, BORDER FINE, PADDING 20PX, RADIUS 12PX) -->
+                <div class="space-y-3">
+                    @forelse ($projectRequests['all'] as $req)
+                        <div 
+                            x-show="matchesDemande('{{ $req['status'] }}', '{{ strtolower(addslashes($req['reference'] . ' ' . $req['client_name'] . ' ' . ($req['client_company'] ?? '') . ' ' . $req['title'] . ' ' . ($req['competency_name'] ?? '') . ' ' . $req['category'] . ' ' . $req['budget'])) }}')"
+                            class="bg-white rounded-[12px] border border-neutral-200/80 p-5 hover:border-neutral-300 transition-all space-y-3 shadow-sm"
+                        >
+                            <!-- LIGNE 1 : AVATAR + NOM + RÉF + TEL + STATUS + REÇUE -->
+                            <div class="flex items-center justify-between gap-3 flex-wrap">
+                                <div class="flex items-center gap-2.5 min-w-0">
+                                    <div class="w-7 h-7 rounded-lg bg-[#111] text-[#FFB800] text-xs font-bold font-mono flex items-center justify-center shrink-0">
+                                        {{ $req['client_avatar'] }}
                                     </div>
-
-                                    <div class="flex items-center gap-2">
-                                        @if ($req['status'] === 'nouvelle')
-                                            <span class="px-2.5 py-0.5 rounded-full text-[10px] font-black bg-[#FFB515] text-black">
-                                                ● Nouvelle demande
-                                            </span>
-                                        @elseif ($req['status'] === 'en_attente')
-                                            <span class="px-2.5 py-0.5 rounded-full text-[10px] font-black bg-amber-100 text-amber-900">
-                                                ● En attente de réponse
-                                            </span>
-                                        @elseif ($req['status'] === 'en_cours')
-                                            <span class="px-2.5 py-0.5 rounded-full text-[10px] font-black bg-emerald-100 text-emerald-900">
-                                                ● Mission en cours
-                                            </span>
-                                        @elseif ($req['status'] === 'terminee')
-                                            <span class="px-2.5 py-0.5 rounded-full text-[10px] font-black bg-neutral-200 text-neutral-800">
-                                                ✓ Clôturée avec succès
-                                            </span>
-                                        @endif
-                                        <span class="text-[11px] font-mono text-neutral-400">{{ $req['created_at_human'] }}</span>
-                                    </div>
+                                    <span class="font-bold text-sm text-[#111] truncate">{{ $req['client_name'] }}</span>
+                                    <span class="text-[11px] font-mono font-medium text-neutral-500 bg-[#F7F7F8] border border-neutral-200/60 px-1.5 py-0.5 rounded">
+                                        {{ $req['reference'] }}
+                                    </span>
+                                    @if ($req['client_contact'])
+                                        <span class="text-xs text-neutral-400 font-mono hidden sm:inline">{{ $req['client_contact'] }}</span>
+                                    @endif
                                 </div>
 
-                                <div>
-                                    <h4 class="font-black text-sm text-neutral-900">{{ $req['title'] }}</h4>
-                                    <p class="text-xs text-neutral-600 mt-1.5 leading-relaxed">
-                                        {{ $req['description'] }}
-                                    </p>
+                                <div class="flex items-center gap-2 shrink-0">
+                                    <!-- BADGE STATUT : JAUNE #FFB800 UNIQUEMENT POUR BADGE ACTIF (MISSION EN COURS) -->
+                                    @if ($req['status'] === 'en_cours')
+                                        <span class="px-2 py-0.5 rounded-md text-[10px] font-bold bg-[#FFB800]/20 text-[#855B00] border border-[#FFB800]/40">
+                                            Mission en cours
+                                        </span>
+                                    @elseif ($req['status'] === 'a_traiter')
+                                        <span class="px-2 py-0.5 rounded-md text-[10px] font-bold bg-amber-100 text-amber-900 border border-amber-200">
+                                            ⚡ À traiter
+                                        </span>
+                                    @elseif ($req['status'] === 'repondues')
+                                        <span class="px-2 py-0.5 rounded-md text-[10px] font-bold bg-sky-100 text-sky-800 border border-sky-200" title="En attente retour client">
+                                            ✉️ Réponse envoyée (En attente retour client)
+                                        </span>
+                                    @elseif ($req['status'] === 'acceptees')
+                                        <span class="px-2 py-0.5 rounded-md text-[10px] font-bold bg-emerald-100 text-emerald-800 border border-emerald-200">
+                                            ✓ Accepté
+                                        </span>
+                                    @elseif ($req['status'] === 'terminees')
+                                        <span class="px-2 py-0.5 rounded-md text-[10px] font-bold bg-neutral-100 text-neutral-700 border border-neutral-200">
+                                            🏁 Terminé
+                                        </span>
+                                    @elseif ($req['status'] === 'annulees')
+                                        <span class="px-2 py-0.5 rounded-md text-[10px] font-bold bg-rose-100 text-rose-700 border border-rose-200">
+                                            ✕ Déclinée
+                                        </span>
+                                    @endif
+
+                                    <span class="text-xs text-neutral-400 font-mono" title="{{ $req['created_at_formatted'] }}">
+                                        Reçue {{ $req['created_at_human'] }}
+                                    </span>
+                                </div>
+                            </div>
+
+                            <!-- LIGNE 2 : TITRE + TAG ARTICLES DE BLOG EN BOLD 14PX + DESCRIPTION TRONQUÉE À 60 CARACTÈRES -->
+                            <div class="flex items-center gap-2 flex-wrap text-sm">
+                                <span class="font-bold text-sm text-[#111]">{{ $req['title'] }}</span>
+                                @if ($req['competency_name'] || $req['category'])
+                                    <span class="text-[11px] font-semibold text-neutral-600 bg-[#F7F7F8] border border-neutral-200/60 px-2 py-0.5 rounded">
+                                        {{ $req['competency_name'] ?: $req['category'] }}
+                                    </span>
+                                @endif
+                                <span class="text-xs text-neutral-500 truncate max-w-xl">
+                                    — {{ Str::limit(strip_tags($req['description']), 60) }}
+                                </span>
+                            </div>
+
+                            <!-- LIGNE 3 : 3 ICÔNES SEULES + 2 BOUTONS (1 PRIMAIRE NOIR, RESTE EN SECONDAIRE) -->
+                            <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pt-2.5 border-t border-neutral-100 text-xs">
+                                <!-- 3 ICÔNES SEULES : 💰 budget / ⏱ délai / 🕒 activité -->
+                                <div class="flex items-center gap-4 text-neutral-600">
+                                    <span title="Budget">💰 <strong class="text-[#111] font-mono">{{ $req['budget'] }}</strong></span>
+                                    <span title="Délai">⏱ <span class="font-mono text-neutral-700">{{ $req['deadline'] }}</span></span>
+                                    <span title="Dernière activité">🕒 <span class="font-mono text-neutral-400">{{ $req['last_activity_formatted'] }}</span></span>
+
+                                    @if (count($req['client_files']) > 0)
+                                        <span class="text-neutral-400 text-[11px] font-mono" title="{{ count($req['client_files']) }} fichier(s) client">
+                                            📎 {{ count($req['client_files']) }}
+                                        </span>
+                                    @endif
+                                    @if (count($req['deliverable_files']) > 0)
+                                        <span class="text-neutral-400 text-[11px] font-mono" title="{{ count($req['deliverable_files']) }} livrable(s)">
+                                            📦 {{ count($req['deliverable_files']) }}
+                                        </span>
+                                    @endif
                                 </div>
 
-                                <!-- INFORMATIONS BUDGÉTAIRES ET LIVRABLES -->
-                                <div class="flex flex-wrap items-center justify-between gap-4 pt-2">
-                                    <div class="flex flex-wrap items-center gap-2 text-xs">
-                                        <div class="px-2.5 py-1 bg-white border border-neutral-200 rounded-xl font-mono font-bold text-neutral-900">
-                                            Budget proposé : {{ $req['budget'] }}
-                                        </div>
-                                        <div class="px-2.5 py-1 bg-white border border-neutral-200 rounded-xl font-mono text-neutral-600">
-                                            Délai : {{ $req['deadline'] }}
-                                        </div>
-                                        @foreach ($req['requirements'] as $tag)
-                                            <span class="px-2 py-0.5 bg-neutral-100 text-neutral-600 rounded-lg text-[10px] font-medium">
-                                                {{ $tag }}
-                                            </span>
-                                        @endforeach
-                                    </div>
+                                <!-- 2 BOUTONS : Consulter la fiche (texte secondaire) + 1 bouton primaire noir à droite -->
+                                <div class="flex items-center gap-2 shrink-0 self-end sm:self-auto">
+                                    <button 
+                                        type="button"
+                                        @click="selectedRequest = {{ json_encode($req) }}; showBriefModal = true"
+                                        class="text-xs font-semibold text-neutral-500 hover:text-black transition-colors px-2 py-1 cursor-pointer"
+                                    >
+                                        Consulter la fiche
+                                    </button>
 
-                                    <!-- ACTIONS DISPONIBLES SELON LE STATUT -->
-                                    <div class="flex items-center gap-2 shrink-0">
+                                    @if ($req['status'] === 'a_traiter')
                                         <button 
-                                            @click="selectedRequest = {{ json_encode($req) }}; showBriefModal = true"
-                                            class="h-9 px-3 rounded-xl border border-neutral-300 hover:border-black text-xs font-bold bg-white text-neutral-800"
+                                            type="button"
+                                            @click="selectedRequest = {{ json_encode($req) }}; briefActionType = 'accepter'; showBriefModal = true"
+                                            class="h-8 px-3.5 bg-[#111] hover:bg-neutral-800 text-white text-xs font-bold rounded-lg transition-colors cursor-pointer shadow-sm"
                                         >
-                                            Consulter le brief complet
+                                            Accepter la mission →
                                         </button>
-
-                                        @if (in_array($req['status'], ['nouvelle', 'en_attente']))
-                                            <button 
-                                                @click="selectedRequest = {{ json_encode($req) }}; showBriefModal = true"
-                                                class="h-9 px-4 rounded-xl bg-black hover:bg-[#FFB515] hover:text-black text-white text-xs font-extrabold transition-all"
-                                            >
-                                                Consulter le brief / Décider
-                                            </button>
-                                        @elseif ($req['status'] === 'en_cours' || in_array($req['db_status'], ['mission_confirmee', 'en_cours', 'terminee', 'reponse_talent']))
-                                            <a 
-                                                href="{{ route('candidat.projets.tracking', $req['id']) }}"
-                                                class="h-9 px-4 rounded-xl bg-black hover:bg-[#FFB515] hover:text-black text-white text-xs font-extrabold transition-all flex items-center gap-1.5"
-                                            >
-                                                <span>Gérer le suivi du projet →</span>
-                                            </a>
-                                        @endif
-                                    </div>
+                                    @elseif ($req['can_track'])
+                                        <a 
+                                            href="{{ $req['tracking_url'] }}"
+                                            class="h-8 px-3.5 bg-[#111] hover:bg-neutral-800 text-white text-xs font-bold rounded-lg transition-colors inline-flex items-center gap-1 cursor-pointer shadow-sm"
+                                        >
+                                            <span>Gérer le suivi</span>
+                                            <span>→</span>
+                                        </a>
+                                    @elseif ($req['status'] === 'repondues')
+                                        <button 
+                                            type="button"
+                                            @click="selectedRequest = {{ json_encode($req) }}; showBriefModal = true"
+                                            class="h-8 px-3 bg-neutral-100 hover:bg-neutral-200 text-neutral-700 text-xs font-medium rounded-lg transition-colors cursor-pointer"
+                                        >
+                                            En attente client ⏳
+                                        </button>
+                                    @endif
                                 </div>
                             </div>
-                        @empty
-                            <div class="p-8 text-center bg-[#FAF8F2] rounded-2xl border border-neutral-200 space-y-2">
-                                <div class="text-2xl">📬</div>
-                                <div class="font-bold text-sm text-neutral-800">Aucune demande de projet pour le moment</div>
-                                <p class="text-xs text-neutral-500 max-w-sm mx-auto">
-                                    Vos demandes clients apparaîtront ici dès qu'une entreprise ou un particulier sollicitera vos compétences.
-                                </p>
-                            </div>
-                        @endforelse
+                        </div>
+                    @empty
+                        <div class="p-8 text-center bg-white rounded-[12px] border border-neutral-200/80 space-y-2">
+                            <div class="text-2xl">📬</div>
+                            <div class="font-bold text-sm text-[#111]">Aucune demande de projet pour le moment</div>
+                            <p class="text-xs text-neutral-400">Vos opportunités apparaîtront ici dès qu'un client vous sollicitera.</p>
+                        </div>
+                    @endforelse
+
+                    <!-- ÉTAT VIDE SI AUCUN RÉSULTAT DE RECHERCHE -->
+                    <div 
+                        x-show="allDemandesList.length > 0 && getFilteredDemandes().length === 0" 
+                        x-cloak
+                        class="p-8 text-center bg-white rounded-[12px] border border-neutral-200/80 space-y-2"
+                    >
+                        <div class="text-2xl">🔍</div>
+                        <div class="font-bold text-sm text-[#111]">Aucune demande ne correspond à vos filtres</div>
+                        <button 
+                            @click="demandeFilter = 'toutes'; demandeSearch = ''" 
+                            class="text-xs font-bold text-neutral-600 hover:text-black underline cursor-pointer"
+                        >
+                            Afficher toutes les demandes
+                        </button>
                     </div>
                 </div>
 
@@ -837,108 +1108,124 @@
             <!-- 3. VUE MES COMPÉTENCES (GESTION DES COMPÉTENCES & PREUVES)     -->
             <!-- ============================================================== -->
             <div x-show="tab === 'competences'" x-cloak class="space-y-6">
-                <div class="bg-white rounded-3xl p-5 lg:p-6 border border-[#E8E5DC] shadow-sm space-y-6">
+                <div class="bg-white rounded-3xl p-5 lg:p-6 border border-neutral-200/80 shadow-sm space-y-6">
                     <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-neutral-100 pb-5">
                         <div>
                             <h2 class="text-base font-black text-black">Mes Compétences Certifiées</h2>
-                            <p class="text-xs text-neutral-500 mt-0.5">
-                                Consultez l'état de validation par le comité technique et soumettez des preuves complémentaires.
-                            </p>
                         </div>
                         <button 
-                            @click="showAddSkillModal = true"
-                            class="h-10 px-4 bg-[#FFB515] hover:bg-[#E5A20C] text-black font-extrabold text-xs rounded-2xl flex items-center gap-1.5 transition-all self-start sm:self-auto shadow-sm"
+                            @click="showAddSkillModal = true;"
+                            class="h-10 px-4 bg-[#FFB800] hover:bg-[#e0a200] text-black font-extrabold text-xs rounded-xl flex items-center gap-1.5 transition-all self-start sm:self-auto shadow-sm cursor-pointer"
                         >
                             <span>+ Ajouter une compétence</span>
                         </button>
                     </div>
 
-                    <!-- GRILLE DES COMPÉTENCES DÉCLARÉES ET AUDITÉES -->
+                    <!-- GRILLE DES COMPÉTENCES DÉCLARÉES ET AUDITÉES (LAYOUT 2 COLONNES COMPACT) -->
                     <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
                         @forelse ($competencies as $comp)
-                            <div class="p-5 rounded-2xl bg-[#FAF8F2] border border-[#E8E5DC] flex flex-col justify-between space-y-4">
-                                <div>
-                                    <div class="flex items-start justify-between gap-3 mb-2">
-                                        <span class="text-[10px] font-mono font-bold uppercase tracking-wider text-neutral-500">
+                            <div class="p-5 rounded-2xl bg-white border border-neutral-200/90 shadow-xs flex flex-col justify-between hover:shadow-md transition-all space-y-4">
+                                <div class="space-y-3">
+                                    <!-- 1 LIGNE POUR META (CATÉGORIE + STATUT + NIVEAU/SCORE) -->
+                                    <div class="flex items-center justify-between gap-2 flex-wrap">
+                                        <span class="text-[10px] font-mono font-bold uppercase tracking-wider text-neutral-400">
                                             {{ $comp['category'] }}
                                         </span>
-                                        <div class="flex items-center gap-1.5 flex-wrap justify-end">
+                                        <div class="flex items-center gap-1.5 flex-wrap">
                                             @if (!empty($comp['is_custom']))
-                                                <span class="px-2 py-0.5 rounded-full text-[10px] font-bold bg-neutral-100 text-neutral-600 border border-neutral-300">
+                                                <span class="px-2 py-0.5 rounded-full text-[10px] font-bold bg-neutral-100 text-neutral-600 border border-neutral-200">
                                                     Personnalisée
                                                 </span>
                                             @endif
                                             @if ($comp['status'] === 'verified')
-                                                <span class="px-2.5 py-0.5 rounded-full text-[10px] font-black bg-emerald-100 text-emerald-800 border border-emerald-200">
+                                                <span class="px-2.5 py-0.5 rounded-full text-[10px] font-black bg-emerald-50 text-emerald-700 border border-emerald-200">
                                                     ✓ {{ $comp['status_label'] }}
                                                 </span>
                                             @elseif ($comp['status'] === 'declared')
-                                                <span class="px-2.5 py-0.5 rounded-full text-[10px] font-black bg-sky-100 text-sky-800 border border-sky-200">
+                                                <span class="px-2.5 py-0.5 rounded-full text-[10px] font-black bg-amber-50 text-amber-900 border border-[#FFE7A3]">
                                                     ● {{ $comp['status_label'] }}
                                                 </span>
                                             @elseif ($comp['status'] === 'in_review')
-                                                <span class="px-2.5 py-0.5 rounded-full text-[10px] font-black bg-[#FFF9EC] text-amber-900 border border-[#FFE7A3]">
+                                                <span class="px-2.5 py-0.5 rounded-full text-[10px] font-black bg-blue-50 text-blue-700 border border-blue-200">
                                                     ⏳ {{ $comp['status_label'] }}
                                                 </span>
                                             @else
-                                                <span class="px-2.5 py-0.5 rounded-full text-[10px] font-black bg-purple-100 text-purple-900 border border-purple-200">
+                                                <span class="px-2.5 py-0.5 rounded-full text-[10px] font-black bg-purple-50 text-purple-700 border border-purple-200">
                                                     ⚠️ {{ $comp['status_label'] }}
                                                 </span>
                                             @endif
-                                        </div>
-                                    </div>
-
-                                    <div class="flex items-start gap-3">
-                                        @if (!empty($comp['thumbnail']))
-                                            <img src="{{ $comp['thumbnail_url'] ?? $comp['thumbnail'] }}" alt="{{ $comp['name'] }}" class="w-12 h-12 rounded-xl object-cover border border-[#E8E5DC] flex-shrink-0">
-                                        @endif
-                                        <div class="flex-1 min-w-0">
-                                            <h3 class="font-black text-sm text-neutral-900">{{ $comp['name'] }}</h3>
-                                            @if (!empty($comp['thumbnail']))
-                                                <span class="text-[10px] text-emerald-600 font-medium flex items-center gap-0.5 mt-0.5">
-                                                    <span>🖼️</span> Miniature configurée
+                                            <span class="px-2 py-0.5 rounded-full text-[10px] font-bold bg-[#F3F4F6] text-neutral-700">
+                                                Niveau {{ $comp['level'] }}
+                                            </span>
+                                            @if (!empty($comp['is_certified']))
+                                                <span class="px-2 py-0.5 rounded-full text-[10px] font-black bg-emerald-100 text-emerald-800">
+                                                    {{ $comp['score'] }}/100
                                                 </span>
                                             @endif
                                         </div>
                                     </div>
 
+                                    <!-- TITRE & MINIATURE -->
+                                    <div class="flex items-start gap-3">
+                                        @if (!empty($comp['thumbnail']))
+                                            <img src="{{ $comp['thumbnail_url'] ?? $comp['thumbnail'] }}" alt="{{ $comp['name'] }}" class="w-12 h-12 rounded-xl object-cover border border-neutral-200 flex-shrink-0">
+                                        @endif
+                                        <div class="flex-1 min-w-0">
+                                            <h3 class="font-bold text-sm text-[#111111] leading-snug">{{ $comp['name'] }}</h3>
+                                            @if (!empty($comp['thumbnail']))
+                                                <span class="text-[10px] text-emerald-600 font-semibold flex items-center gap-1 mt-0.5">
+                                                    <span class="w-1.5 h-1.5 rounded-full bg-emerald-500"></span> Miniature configurée
+                                                </span>
+                                            @endif
+                                        </div>
+                                    </div>
+
+                                    <!-- DESCRIPTION TRONQUÉE À 120 CARACTÈRES -->
                                     @if (!empty($comp['description']))
-                                        <p class="text-xs text-neutral-600 mt-1.5 leading-relaxed line-clamp-3">
-                                            {{ $comp['description'] }}
+                                        <p class="text-xs text-neutral-600 leading-relaxed">
+                                            {{ \Illuminate\Support\Str::limit(strip_tags($comp['description']), 120) }}
                                         </p>
                                     @endif
 
+                                    <!-- CHIPS PRIX + DÉLAI -->
                                     @if (!empty($comp['price']) || !empty($comp['delivery_time']))
-                                        <div class="mt-2.5 flex flex-wrap items-center gap-2">
+                                        <div class="flex flex-wrap items-center gap-2">
                                             @if (!empty($comp['price']))
-                                                <span class="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-white border border-neutral-200 text-neutral-900 text-[11px] font-bold font-mono">
+                                                <span class="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-[#F7F7F8] border border-neutral-200/80 text-[#111] text-[11px] font-bold font-mono">
                                                     <span>💰</span> {{ $comp['price'] }}
                                                 </span>
                                             @endif
                                             @if (!empty($comp['delivery_time']))
-                                                <span class="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-white border border-neutral-200 text-neutral-700 text-[11px] font-medium font-mono">
+                                                <span class="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-[#F7F7F8] border border-neutral-200/80 text-neutral-700 text-[11px] font-medium font-mono">
                                                     <span>⏱️</span> {{ $comp['delivery_time'] }}
                                                 </span>
                                             @endif
                                         </div>
                                     @endif
 
+                                    <!-- BLOC PREUVE FOURNIE -->
                                     @if (!empty($comp['proof_title']) && $comp['proof_title'] !== '—')
-                                        <div class="mt-3 p-3 rounded-xl bg-white border border-neutral-200 text-xs space-y-1">
-                                            <div class="flex items-center justify-between text-[11px]">
-                                                <span class="text-neutral-500 font-mono">Preuve fournie :</span>
-                                                <span class="font-bold text-neutral-800">{{ $comp['proof_type'] ?? 'Lien ou attestation' }}</span>
+                                        <div class="p-2.5 rounded-xl bg-[#F7F7F8] border border-neutral-200/70 text-xs space-y-1">
+                                            <div class="flex items-center justify-between text-[10px]">
+                                                <span class="text-neutral-400 font-mono font-bold uppercase tracking-wider">Preuve fournie :</span>
+                                                <span class="font-bold text-neutral-700">{{ $comp['proof_type'] ?? 'Dossier & Justificatif' }}</span>
                                             </div>
-                                            <div class="text-[11px] text-neutral-600 font-medium truncate">
-                                                {{ $comp['proof_title'] }}
+                                            <div class="text-[11px] text-neutral-700 font-mono truncate">
+                                                @if (\Illuminate\Support\Str::startsWith($comp['proof_title'], ['http://', 'https://']))
+                                                    <a href="{{ $comp['proof_title'] }}" target="_blank" class="text-blue-600 hover:underline inline-flex items-center gap-1">
+                                                        <span>🔗</span> {{ $comp['proof_title'] }}
+                                                    </a>
+                                                @else
+                                                    {{ $comp['proof_title'] }}
+                                                @endif
                                             </div>
                                         </div>
                                     @endif
 
+                                    <!-- AVIS DU COMITÉ TECHNIQUE -->
                                     @if (!empty($comp['committee_feedback']))
-                                        <!-- NOTE DU COMITÉ TECHNIQUE -->
-                                        <div class="mt-3 text-xs text-neutral-700 bg-neutral-100/70 p-3 rounded-xl border border-neutral-200/50">
-                                            <span class="font-bold text-neutral-900 block text-[11px] mb-0.5">Avis du comité technique :</span>
+                                        <div class="text-xs text-neutral-700 bg-[#F7F7F8] p-2.5 rounded-xl border border-neutral-200/70">
+                                            <span class="font-bold block text-[10px] uppercase font-mono tracking-wider text-neutral-400 mb-0.5">Avis du comité technique :</span>
                                             <p class="text-[11px] leading-relaxed italic text-neutral-600">
                                                 « {{ $comp['committee_feedback'] }} »
                                             </p>
@@ -946,42 +1233,32 @@
                                     @endif
                                 </div>
 
-                                <div class="pt-2 border-t border-neutral-200/60 flex items-center justify-between text-xs font-mono">
-                                    <div class="flex items-center gap-3">
-                                        <span class="text-neutral-500">Niveau : <strong class="text-black font-sans">{{ $comp['level'] }}</strong></span>
-                                        @if (!empty($comp['is_certified']))
-                                            <span class="font-bold text-emerald-700">{{ $comp['score'] }}/100</span>
-                                        @endif
-                                    </div>
-                                    <div class="flex items-center gap-2">
-                                        @if (in_array($comp['db_status'], ['valide', 'active', 'declare']))
-                                            <a 
-                                                href="{{ route('prestation.show', $comp['id']) }}" 
-                                                target="_blank"
-                                                class="text-xs font-bold font-sans text-neutral-700 hover:text-black hover:bg-neutral-200/70 py-1 px-2.5 rounded-lg transition inline-flex items-center gap-1 border border-neutral-200"
-                                                title="Voir la page publique de cette prestation"
-                                            >
-                                                <span>👁️</span> Voir la prestation
-                                            </a>
-                                        @endif
-                                        <button 
-                                            type="button" 
-                                            @click="editingSkill = {{ Js::from($comp) }}; showEditSkillModal = true"
-                                            class="text-xs font-bold font-sans text-neutral-700 hover:text-black hover:bg-neutral-200/70 py-1 px-2.5 rounded-lg transition inline-flex items-center gap-1 border border-neutral-200"
+                                <!-- ACTIONS (VOIR LA PRESTATION + MODIFIER) -->
+                                <div class="pt-3 border-t border-neutral-100 flex items-center justify-end gap-2">
+                                    @if (in_array($comp['db_status'], ['valide', 'active', 'declare']))
+                                        <a 
+                                            href="{{ route('prestation.show', $comp['id']) }}" 
+                                            target="_blank"
+                                            class="text-xs font-bold text-neutral-700 hover:text-black hover:bg-neutral-100 py-1.5 px-3 rounded-xl transition inline-flex items-center gap-1.5 border border-neutral-200 cursor-pointer"
+                                            title="Voir la page publique de cette prestation"
                                         >
-                                            <span>✏️</span> Modifier
-                                        </button>
-                                    </div>
+                                            <span>👁️</span> Voir la prestation
+                                        </a>
+                                    @endif
+                                    <button 
+                                        type="button" 
+                                        @click="editingSkill = {{ Js::from($comp) }}; showEditSkillModal = true;"
+                                        class="text-xs font-bold text-neutral-800 hover:text-black hover:bg-neutral-100 py-1.5 px-3 rounded-xl transition inline-flex items-center gap-1.5 border border-neutral-200 cursor-pointer"
+                                    >
+                                        <span>✏️</span> Modifier
+                                    </button>
                                 </div>
                             </div>
                         @empty
-                            <div class="col-span-full p-8 text-center bg-[#FAF8F2] rounded-2xl border border-neutral-200 space-y-2">
-                                <div class="text-2xl">🎯</div>
-                                <div class="font-bold text-sm text-neutral-800">Aucune compétence enregistrée</div>
-                                <p class="text-xs text-neutral-500 max-w-sm mx-auto">
-                                    Ajoutez vos compétences et prestations avec vos tarifs et délais indicatifs.
-                                </p>
-                                <button @click="showAddSkillModal = true" class="mt-2 h-9 px-4 bg-[#FFB515] text-black text-xs font-bold rounded-xl shadow-sm">
+                            <div class="col-span-full p-8 text-center bg-white rounded-2xl border border-neutral-200/80 space-y-3">
+                                <div class="text-3xl">🎯</div>
+                                <div class="font-bold text-sm text-[#111]">Aucune compétence enregistrée</div>
+                                <button @click="showAddSkillModal = true; modalTab = 'essentiel'; showCommercialDetails = false;" class="h-10 px-4 bg-[#FFB800] hover:bg-[#e0a200] text-[#111] text-xs font-bold rounded-xl shadow-sm transition cursor-pointer">
                                     + Ajouter une compétence
                                 </button>
                             </div>
@@ -1248,25 +1525,48 @@
                                         <th class="py-2.5">MONTANT</th>
                                         <th class="py-2.5">STATUT</th>
                                         <th class="py-2.5">DATE</th>
+                                        <th class="py-2.5 text-right">ACTION</th>
                                     </tr>
                                 </thead>
                                 <tbody class="divide-y divide-neutral-100">
                                     @forelse ($quotes as $q)
                                         <tr class="hover:bg-neutral-50">
                                             <td class="py-3 font-mono font-bold text-black">{{ $q['id'] }}</td>
-                                            <td class="py-3 font-bold text-neutral-800">{{ $q['client_name'] }}</td>
-                                            <td class="py-3 text-neutral-600">{{ $q['project_title'] }}</td>
+                                            <td class="py-3 font-bold text-neutral-800">
+                                                {{ $q['client_name'] }}
+                                                @if(!empty($q['client_company']))
+                                                    <span class="block text-[10px] text-neutral-400 font-normal">{{ $q['client_company'] }}</span>
+                                                @endif
+                                            </td>
+                                            <td class="py-3 text-neutral-600 truncate max-w-xs">{{ $q['project_title'] }}</td>
                                             <td class="py-3 font-mono font-black text-black">{{ $q['amount'] }}</td>
                                             <td class="py-3">
-                                                <span class="px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-100 text-emerald-800">
+                                                <span class="px-2 py-0.5 rounded-full text-[10px] font-bold border {{ $q['status_badge_class'] ?? 'bg-neutral-100 text-neutral-800 border-neutral-200' }}">
                                                     {{ $q['status_label'] }}
                                                 </span>
                                             </td>
                                             <td class="py-3 font-mono text-neutral-400 text-[11px]">{{ $q['date'] }}</td>
+                                            <td class="py-3 text-right">
+                                                @if (!empty($q['can_track']))
+                                                    <a 
+                                                        href="{{ $q['tracking_url'] }}"
+                                                        class="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-black hover:bg-[#FFB515] hover:text-black text-white font-bold text-[10px] transition-all"
+                                                    >
+                                                        Suivi →
+                                                    </a>
+                                                @else
+                                                    <a 
+                                                        href="{{ route('candidat.dashboard', ['tab' => 'demandes', 'demande_id' => $q['db_id'] ?? null]) }}"
+                                                        class="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg border border-neutral-300 hover:border-black text-neutral-800 text-[10px] font-bold transition-all"
+                                                    >
+                                                        Détails
+                                                    </a>
+                                                @endif
+                                            </td>
                                         </tr>
                                     @empty
                                         <tr>
-                                            <td colspan="6" class="py-8 text-center text-neutral-400 font-sans">
+                                            <td colspan="7" class="py-8 text-center text-neutral-400 font-sans">
                                                 Aucun devis émis pour l'instant. Répondez aux demandes pour générer vos premières propositions.
                                             </td>
                                         </tr>
@@ -1301,9 +1601,10 @@
                                 <tbody class="divide-y divide-neutral-100">
                                     @php
                                         $confirmedMissions = array_filter(
-                                            array_merge($projectRequests['en_cours'] ?? [], $projectRequests['terminees'] ?? []),
-                                            fn($p) => in_array($p['db_status'] ?? '', ['reponse_talent', 'mission_confirmee', 'en_cours', 'terminee'])
+                                            array_merge($projectRequests['acceptees'] ?? [], $projectRequests['en_cours_only'] ?? [], $projectRequests['terminees_only'] ?? []),
+                                            fn($p) => in_array($p['db_status'] ?? '', ['mission_confirmee', 'en_cours', 'terminee'])
                                         );
+                                        usort($confirmedMissions, fn($a, $b) => ($b['id'] ?? 0) <=> ($a['id'] ?? 0));
                                     @endphp
                                     @forelse ($confirmedMissions as $m)
                                         <tr class="hover:bg-neutral-50">
@@ -1431,10 +1732,8 @@
                 </div>
             </div>
 
-        </main>
-
-
-
+            </main>
+        </div>
     </div>
 
     <!-- ============================================================== -->
@@ -1591,41 +1890,119 @@
                             </div>
                         </div>
 
-                        <!-- FORMULAIRE DE DÉCISION DU TALENT (ACCEPTER OU REFUSER) -->
-                        <form :action="'/candidat/demandes/' + selectedRequest.id + '/repondre'" method="POST" class="space-y-3 pt-3 border-t border-neutral-100">
-                            @csrf
-                            <input type="hidden" name="action_type" x-ref="briefActionType" value="accepter">
-
-                            <div>
-                                <label class="block text-xs font-bold text-neutral-700 mb-1">Message d'accompagnement ou note interne (Optionnel)</label>
-                                <textarea name="message" rows="2" placeholder="Précisez votre disponibilité, les conditions d'intervention ou vos remarques pour ce projet..." class="w-full p-3 bg-[#FAF8F2] border border-[#E8E5DC] rounded-xl text-xs"></textarea>
+                        <!-- FICHIERS TRANSMIS PAR LE CLIENT (FONCTIONNALITÉ C) -->
+                        <template x-if="selectedRequest.client_files && selectedRequest.client_files.length > 0">
+                            <div class="p-3.5 rounded-2xl bg-neutral-50 border border-neutral-200 text-xs space-y-2">
+                                <span class="font-bold text-neutral-800 text-[11px] uppercase tracking-wider block">Fichiers & documents transmis par le client :</span>
+                                <div class="space-y-1.5">
+                                    <template x-for="(file, idx) in selectedRequest.client_files" :key="idx">
+                                        <div class="flex items-center justify-between p-2 rounded-xl bg-white border border-neutral-200">
+                                            <div class="flex items-center gap-2 truncate pr-2">
+                                                <span>📎</span>
+                                                <span class="font-mono text-neutral-800 truncate" x-text="file.name"></span>
+                                                <span class="text-[10px] text-neutral-400 shrink-0" x-text="'(' + (file.size_formatted || file.step_title) + ')'"></span>
+                                            </div>
+                                            <a :href="file.download_url" class="px-2.5 py-1 bg-black hover:bg-[#FFB515] hover:text-black text-white rounded-lg text-[10px] font-extrabold transition-all shrink-0">
+                                                Télécharger
+                                            </a>
+                                        </div>
+                                    </template>
+                                </div>
                             </div>
+                        </template>
 
-                            <div class="flex items-center gap-2 pt-2 flex-wrap">
-                                <template x-if="['reponse_talent', 'mission_confirmee', 'en_cours', 'terminee'].includes(selectedRequest.db_status)">
-                                    <a 
-                                        :href="'/candidat/projets/' + selectedRequest.id + '/suivi'"
-                                        class="flex-1 h-11 bg-black hover:bg-[#FFB515] hover:text-black text-white font-extrabold text-xs rounded-xl transition-all shadow-sm flex items-center justify-center gap-2"
+                        <!-- HISTORIQUE DES JALONS ET DATES CLÉS (FONCTIONNALITÉ C) -->
+                        <div class="p-3.5 rounded-2xl bg-[#FAF8F2] border border-[#E8E5DC] text-xs space-y-1.5">
+                            <span class="font-bold text-neutral-800 text-[11px] uppercase tracking-wider block">Historique & Jalons de la demande :</span>
+                            <div class="grid grid-cols-1 sm:grid-cols-2 gap-2 text-neutral-700 text-[11px]">
+                                <div><strong class="font-semibold text-neutral-500">Reçue le :</strong> <span x-text="selectedRequest.created_at_formatted || '—'"></span></div>
+                                <template x-if="selectedRequest.talent_responded_at_formatted">
+                                    <div><strong class="font-semibold text-neutral-500">Réponse transmise :</strong> <span x-text="selectedRequest.talent_responded_at_formatted"></span></div>
+                                </template>
+                                <template x-if="selectedRequest.mission_confirmed_at_formatted">
+                                    <div><strong class="font-semibold text-neutral-500">Mission confirmée :</strong> <span x-text="selectedRequest.mission_confirmed_at_formatted"></span></div>
+                                </template>
+                                <template x-if="selectedRequest.completed_at_formatted">
+                                    <div><strong class="font-semibold text-neutral-500">Clôturée le :</strong> <span x-text="selectedRequest.completed_at_formatted"></span></div>
+                                </template>
+                                <div><strong class="font-semibold text-neutral-500">Dernière activité :</strong> <span x-text="selectedRequest.last_activity_date || '—'"></span></div>
+                                <div><strong class="font-semibold text-neutral-500">Statut actuel :</strong> <span class="font-bold text-black" x-text="selectedRequest.status_label"></span></div>
+                            </div>
+                        </div>
+
+                        <!-- PROPOSITION OU NOTES TRANSMISES PAR LE TALENT -->
+                        <template x-if="selectedRequest.talent_response_notes">
+                            <div class="p-3.5 rounded-2xl bg-amber-50/70 border border-amber-200 text-xs space-y-1.5">
+                                <span class="font-bold text-amber-900 text-[11px] uppercase tracking-wider block">Votre proposition / réponse enregistrée :</span>
+                                <div class="text-[12px] text-neutral-800 font-sans whitespace-pre-line bg-white/90 p-2.5 rounded-xl border border-amber-200/60 font-medium" x-text="selectedRequest.talent_response_notes"></div>
+                            </div>
+                        </template>
+
+                        <!-- FORMULAIRE D'ACCEPTATION DE LA MISSION (MISSION CONFIRMÉE & ITINÉRAIRES) -->
+                        <template x-if="selectedRequest.can_respond">
+                            <form :action="'/candidat/demandes/' + selectedRequest.id + '/repondre'" method="POST" @submit="submittingResponse = true" class="space-y-4 pt-4 border-t border-neutral-100">
+                                @csrf
+                                <input type="hidden" name="action_type" value="accepter">
+
+                                <div class="p-4 bg-emerald-50 border border-emerald-200 rounded-2xl flex items-start gap-3">
+                                    <div class="w-8 h-8 rounded-full bg-emerald-600 text-white flex items-center justify-center font-bold text-sm shrink-0 mt-0.5">
+                                        ✓
+                                    </div>
+                                    <div class="text-xs text-emerald-950 leading-relaxed">
+                                        <p class="font-extrabold text-sm text-emerald-900">Confirmation de la mission</p>
+                                        <p class="text-emerald-800 mt-1">En validant cette acceptation, cette demande est instantanément confirmée et ajoutée à vos <strong>Missions confirmées & Itinéraires en cours</strong>. Vous pourrez immédiatement définir les étapes et piloter le projet avec le client.</p>
+                                    </div>
+                                </div>
+
+                                <div>
+                                    <label class="block text-xs font-bold text-neutral-700 mb-1.5">
+                                        Message ou mot d'accueil pour le client (Optionnel) :
+                                    </label>
+                                    <textarea 
+                                        name="message" 
+                                        rows="2" 
+                                        placeholder="Ex: Bonjour, j'accepte votre projet avec grand plaisir ! Je débute immédiatement le cadrage..." 
+                                        class="w-full p-3 bg-[#FAF8F2] border border-[#E8E5DC] rounded-xl text-xs text-neutral-900 placeholder:text-neutral-400 focus:outline-none focus:border-emerald-600"
+                                    ></textarea>
+                                </div>
+
+                                <div class="flex items-center gap-2 pt-2">
+                                    <button 
+                                        type="submit" 
+                                        :disabled="submittingResponse"
+                                        class="flex-1 h-12 bg-emerald-600 hover:bg-emerald-700 text-white font-extrabold text-xs sm:text-sm rounded-xl transition-all shadow-md hover:shadow-lg flex items-center justify-center gap-2 cursor-pointer disabled:opacity-50"
                                     >
-                                        <span>Gérer le suivi du projet →</span>
+                                        <span x-show="!submittingResponse" class="flex items-center gap-2">
+                                            <span class="text-base font-black">✓</span>
+                                            <span>Accepter la mission & Débuter le suivi</span>
+                                        </span>
+                                        <span x-show="submittingResponse">Confirmation en cours...</span>
+                                    </button>
+                                    <button type="button" @click="showBriefModal = false" class="h-12 px-5 border border-neutral-300 text-xs font-bold rounded-xl hover:bg-neutral-50 transition-all cursor-pointer">
+                                        Fermer
+                                    </button>
+                                </div>
+                            </form>
+                        </template>
+
+                        <!-- ACTIONS SI LA DEMANDE N'EST PLUS EN ATTENTE INITIALE -->
+                        <template x-if="!selectedRequest.can_respond">
+                            <div class="space-y-3 pt-3 border-t border-neutral-100">
+                                <template x-if="selectedRequest.can_track">
+                                    <a 
+                                        :href="selectedRequest.tracking_url" 
+                                        class="w-full h-11 bg-black hover:bg-[#FFB515] hover:text-black text-white font-extrabold text-xs rounded-xl transition-all shadow-sm flex items-center justify-center gap-2"
+                                    >
+                                        <span>Gérer le suivi interactif de la mission →</span>
                                     </a>
                                 </template>
-                                <template x-if="!['reponse_talent', 'mission_confirmee', 'en_cours', 'terminee'].includes(selectedRequest.db_status)">
-                                    <div class="contents">
-                                        <button type="submit" @click="$refs.briefActionType.value = 'accepter'" class="flex-1 h-11 bg-emerald-600 hover:bg-emerald-700 text-white font-extrabold text-xs rounded-xl transition-all shadow-sm flex items-center justify-center gap-1.5 cursor-pointer">
-                                            <span>✓</span>
-                                            <span>Accepter la demande</span>
-                                        </button>
-                                        <button type="submit" @click="$refs.briefActionType.value = 'decliner'" onclick="return confirm('Confirmez-vous vouloir décliner cette demande de projet ?');" class="h-11 px-4 bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-200 text-xs font-bold rounded-xl transition-all cursor-pointer">
-                                            Décliner la demande
-                                        </button>
-                                    </div>
-                                </template>
-                                <button type="button" @click="showBriefModal = false" class="h-11 px-4 border border-neutral-300 text-xs font-bold rounded-xl hover:bg-neutral-50 transition-all cursor-pointer">
-                                    Fermer
-                                </button>
+                                <div class="flex justify-end">
+                                    <button type="button" @click="showBriefModal = false" class="h-10 px-4 border border-neutral-300 text-xs font-bold rounded-xl hover:bg-neutral-50 transition-all cursor-pointer">
+                                        Fermer
+                                    </button>
+                                </div>
                             </div>
-                        </form>
+                        </template>
                     </div>
                 </div>
             </template>
@@ -1642,47 +2019,49 @@
     >
         <div 
             @click.away="showAddSkillModal = false"
-            class="bg-white rounded-3xl max-w-lg w-full p-6 space-y-4 border border-neutral-200 shadow-2xl max-h-[90vh] overflow-y-auto"
+            class="bg-white rounded-[20px] max-w-[680px] w-full p-6 sm:p-7 space-y-6 border border-neutral-100 shadow-2xl max-h-[90vh] overflow-y-auto"
         >
-            <div class="flex items-start justify-between border-b border-neutral-100 pb-3">
+            <!-- HEADER -->
+            <div class="flex items-center justify-between border-b border-neutral-100 pb-3">
                 <div>
-                    <h3 class="text-base font-black text-black">Ajouter une compétence ou prestation</h3>
-                    <p class="text-xs text-neutral-500">
-                        @if($candidate->status === 'valide')
-                            En tant que talent accepté, cette compétence sera directement active sur votre profil et catalogue public.
-                        @else
-                            Cette compétence sera enregistrée et examinée lors de l'étude de votre candidature.
-                        @endif
-                    </p>
+                    <h3 class="text-base font-extrabold text-[#111111]">Ajouter une compétence ou prestation</h3>
                 </div>
-                <button @click="showAddSkillModal = false" class="text-neutral-400 hover:text-black font-bold text-lg">&times;</button>
+                <button @click="showAddSkillModal = false" class="text-neutral-400 hover:text-black font-bold text-xl leading-none cursor-pointer">&times;</button>
             </div>
 
-            <form action="{{ route('candidat.competence.store') }}" method="POST" enctype="multipart/form-data" class="space-y-4">
+            <form action="{{ route('candidat.competence.store') }}" method="POST" enctype="multipart/form-data" class="space-y-6">
                 @csrf
-                <div class="space-y-3">
-                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+
+                <!-- SECTION 1 : INFORMATIONS ESSENTIELLES -->
+                <div class="space-y-4">
+                    <div class="flex items-center gap-2 border-b border-neutral-100 pb-1.5">
+                        <span class="w-1.5 h-3.5 rounded-full bg-[#FFB800]"></span>
+                        <span class="text-[11px] font-black uppercase tracking-wider text-neutral-800 font-mono">1. Informations Générales</span>
+                    </div>
+
+                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
                         <div>
-                            <label class="block text-xs font-bold text-neutral-700 mb-1">Catégorie officielle *</label>
+                            <label class="text-[11px] font-bold uppercase tracking-wider text-neutral-400 font-mono block mb-1.5">Catégorie officielle</label>
                             <select 
                                 name="category" 
                                 x-model="newSkillCategory" 
                                 @change="newSkillPredefined = (officialCategories[newSkillCategory] && officialCategories[newSkillCategory][0]) ? officialCategories[newSkillCategory][0] : '__custom__'; newSkillIsCustom = (newSkillPredefined === '__custom__')"
-                                required 
-                                class="w-full h-11 px-3 bg-[#FAF8F2] border border-[#E8E5DC] rounded-xl text-xs font-semibold"
+                                required
+                                class="w-full h-11 px-3 bg-[#F3F4F6] border-0 rounded-xl text-xs font-semibold text-[#111111] focus:ring-2 focus:ring-[#FFB800] focus:bg-white focus:outline-none transition-all"
                             >
                                 <template x-for="(skills, catName) in officialCategories" :key="catName">
                                     <option :value="catName" x-text="catName"></option>
                                 </template>
                             </select>
                         </div>
+
                         <div>
-                            <label class="block text-xs font-bold text-neutral-700 mb-1">Compétence prédéfinie *</label>
+                            <label class="text-[11px] font-bold uppercase tracking-wider text-neutral-400 font-mono block mb-1.5">Compétence prédéfinie</label>
                             <select 
                                 name="predefined_skill"
                                 x-model="newSkillPredefined"
                                 @change="newSkillIsCustom = (newSkillPredefined === '__custom__')"
-                                class="w-full h-11 px-3 bg-[#FAF8F2] border border-[#E8E5DC] rounded-xl text-xs font-semibold"
+                                class="w-full h-11 px-3 bg-[#F3F4F6] border-0 rounded-xl text-xs font-semibold text-[#111111] focus:ring-2 focus:ring-[#FFB800] focus:bg-white focus:outline-none transition-all"
                             >
                                 <template x-for="skill in (officialCategories[newSkillCategory] || [])" :key="skill">
                                     <option :value="skill" x-text="skill"></option>
@@ -1693,41 +2072,56 @@
                     </div>
 
                     <!-- Champ de saisie libre si 'Autre compétence' -->
-                    <div x-show="newSkillIsCustom" x-cloak class="p-3 bg-amber-50/70 border border-amber-200 rounded-xl space-y-1.5">
-                        <label class="block text-xs font-bold text-amber-900 mb-1">Intitulé de votre compétence personnalisée *</label>
+                    <div x-show="newSkillIsCustom" x-cloak class="space-y-1.5">
+                        <label class="text-[11px] font-bold uppercase tracking-wider text-neutral-400 font-mono block mb-1.5">Intitulé personnalisé</label>
                         <input 
                             type="text" 
                             name="custom_skill_name"
                             x-model="newSkillCustomName"
-                            :required="newSkillIsCustom"
-                            placeholder="Ex : Création de filtres AR Instagram, Audit d'expérience utilisateur..."
-                            class="w-full h-10 px-3 bg-white border border-amber-300 rounded-lg text-xs font-semibold text-black focus:outline-none focus:ring-1 focus:ring-amber-500"
+                            placeholder="Ex: Création de filtres AR, Audit UX..."
+                            class="w-full h-11 px-3 bg-[#F3F4F6] border-0 rounded-xl text-xs font-semibold text-[#111111] focus:ring-2 focus:ring-[#FFB800] focus:bg-white focus:outline-none transition-all"
                         >
-                        <p class="text-[10px] text-amber-800 leading-normal">
-                            Votre compétence sera rattachée à la catégorie sélectionnée. Conformément aux règles de sécurité, les compétences personnalisées ne sont pas automatiquement certifiées.
-                        </p>
                     </div>
 
                     <input type="hidden" name="is_custom" :value="newSkillIsCustom ? '1' : '0'">
                     <input type="hidden" name="skill_name" :value="newSkillIsCustom ? newSkillCustomName : newSkillPredefined">
+
+                    <div class="grid grid-cols-1 sm:grid-cols-3 gap-3.5">
+                        <div>
+                            <label class="text-[11px] font-bold uppercase tracking-wider text-neutral-400 font-mono block mb-1.5">Niveau d'expertise</label>
+                            <select name="skill_level" required class="w-full h-11 px-3 bg-[#F3F4F6] border-0 rounded-xl text-xs font-semibold text-[#111111] focus:ring-2 focus:ring-[#FFB800] focus:bg-white focus:outline-none transition-all">
+                                <option value="Intermédiaire">Intermédiaire (1 à 2 ans)</option>
+                                <option value="Avancé" selected>Avancé (3 à 5 ans)</option>
+                                <option value="Senior / Expert">Senior / Expert (+ de 5 ans)</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label class="text-[11px] font-bold uppercase tracking-wider text-neutral-400 font-mono block mb-1.5">Délai indicatif</label>
+                            <input type="text" name="delivery_time" placeholder="Ex: 3 jours, 1 semaine" class="w-full h-11 px-3 bg-[#F3F4F6] border-0 rounded-xl text-xs font-semibold text-[#111111] focus:ring-2 focus:ring-[#FFB800] focus:bg-white focus:outline-none transition-all">
+                        </div>
+                        <div>
+                            <label class="text-[11px] font-bold uppercase tracking-wider text-neutral-400 font-mono block mb-1.5">Tarif en FCFA</label>
+                            <input type="number" min="0" step="1" name="price" placeholder="Ex: 75000" class="w-full h-11 px-3 bg-[#F3F4F6] border-0 rounded-xl text-xs font-semibold text-[#111111] focus:ring-2 focus:ring-[#FFB800] focus:bg-white focus:outline-none transition-all">
+                        </div>
+                    </div>
                 </div>
 
-                <!-- SECTION MINIATURE VISUELLE -->
-                <div class="p-3.5 bg-neutral-50 rounded-2xl border border-neutral-200 space-y-3">
-                    <div>
-                        <span class="font-bold text-neutral-800 text-[11px] uppercase tracking-wider block">Miniature visuelle de la prestation (Optionnel)</span>
-                        <p class="text-[11px] text-neutral-500 mt-0.5">Cette image illustrera votre prestation dans le catalogue et sur sa fiche détaillée.</p>
+                <!-- SECTION 2 : MINIATURE VISUELLE -->
+                <div class="space-y-4">
+                    <div class="flex items-center gap-2 border-b border-neutral-100 pb-1.5">
+                        <span class="w-1.5 h-3.5 rounded-full bg-[#FFB800]"></span>
+                        <span class="text-[11px] font-black uppercase tracking-wider text-neutral-800 font-mono">2. Miniature Visuelle de la Prestation</span>
                     </div>
 
                     <div>
-                        <label class="block text-xs font-bold text-neutral-700 mb-1">Téléverser une image (JPG, PNG, WEBP — max 5 Mo)</label>
-                        <input type="file" name="thumbnail" accept="image/jpeg,image/png,image/webp" class="w-full text-xs text-neutral-600 file:mr-3 file:py-2 file:px-4 file:rounded-xl file:border-0 file:text-xs file:font-bold file:bg-neutral-200 hover:file:bg-[#FFB515] file:cursor-pointer">
+                        <label class="text-[11px] font-bold uppercase tracking-wider text-neutral-400 font-mono block mb-1.5">Téléverser une image (JPG, PNG, WEBP — max 5 Mo)</label>
+                        <input type="file" name="thumbnail" accept="image/jpeg,image/png,image/webp" class="w-full text-xs text-neutral-600 file:mr-3 file:py-2.5 file:px-4 file:rounded-xl file:border-0 file:text-xs file:font-bold file:bg-[#F3F4F6] hover:file:bg-[#FFB800] file:text-neutral-900 file:cursor-pointer transition-all">
                     </div>
 
                     @if (!empty($publishedRealizations) && $publishedRealizations->count() > 0)
-                        <div class="pt-2 border-t border-neutral-200">
-                            <label class="block text-xs font-bold text-neutral-700 mb-1">Ou associer une réalisation déjà validée</label>
-                            <select name="realization_id" class="w-full h-10 px-3 bg-white border border-[#E8E5DC] rounded-xl text-xs font-medium">
+                        <div>
+                            <label class="text-[11px] font-bold uppercase tracking-wider text-neutral-400 font-mono block mb-1.5">Ou associer une réalisation déjà validée</label>
+                            <select name="realization_id" class="w-full h-11 px-3 bg-[#F3F4F6] border-0 rounded-xl text-xs font-medium text-[#111111] focus:ring-2 focus:ring-[#FFB800] focus:bg-white focus:outline-none transition-all">
                                 <option value="">-- Aucune réalisation associée --</option>
                                 @foreach ($publishedRealizations as $pubReal)
                                     <option value="{{ $pubReal->id }}">{{ $pubReal->title }}</option>
@@ -1737,77 +2131,114 @@
                     @endif
                 </div>
 
-                <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                    <div>
-                        <label class="block text-xs font-bold text-neutral-700 mb-1">Niveau d'expertise revendiqué *</label>
-                        <select name="skill_level" required class="w-full h-11 px-3 bg-[#FAF8F2] border border-[#E8E5DC] rounded-xl text-xs font-semibold">
-                            <option value="Intermédiaire">Intermédiaire (1 à 2 ans de pratique)</option>
-                            <option value="Avancé" selected>Avancé (3 à 5 ans de pratique)</option>
-                            <option value="Senior / Expert">Senior / Expert (+ de 5 ans)</option>
-                        </select>
+                <!-- SECTION 3 : PRÉSENTATION COMMERCIALE DÉTAILLÉE -->
+                <div class="space-y-4">
+                    <div class="flex items-center gap-2 border-b border-neutral-100 pb-1.5">
+                        <span class="w-1.5 h-3.5 rounded-full bg-[#FFB800]"></span>
+                        <span class="text-[11px] font-black uppercase tracking-wider text-neutral-800 font-mono">3. Présentation Commerciale</span>
                     </div>
+
                     <div>
-                        <label class="block text-xs font-bold text-neutral-700 mb-1">Délai indicatif (Optionnel)</label>
-                        <input type="text" name="delivery_time" placeholder="Ex: 3 jours, 1 semaine" class="w-full h-11 px-3 bg-[#FAF8F2] border border-[#E8E5DC] rounded-xl text-xs font-semibold">
+                        <label class="text-[11px] font-bold uppercase tracking-wider text-neutral-400 font-mono block mb-1.5">Description détaillée de la prestation</label>
+                        <textarea 
+                            name="description" 
+                            rows="3" 
+                            placeholder="Précisez le périmètre : livrables, technologies, bénéfices pour le client..." 
+                            class="w-full p-3 bg-[#F3F4F6] border-0 rounded-xl text-xs text-[#111111] focus:ring-2 focus:ring-[#FFB800] focus:bg-white focus:outline-none transition-all resize-y"
+                        ></textarea>
+                    </div>
+
+                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
+                        <div>
+                            <label class="text-[11px] font-bold uppercase tracking-wider text-neutral-400 font-mono block mb-1.5">Public visé (À qui s'adresse cette prestation ?)</label>
+                            <input 
+                                type="text" 
+                                name="target_audience" 
+                                placeholder="Ex: PME, créateurs de marques, e-commerçants..." 
+                                class="w-full h-11 px-3 bg-[#F3F4F6] border-0 rounded-xl text-xs text-[#111111] focus:ring-2 focus:ring-[#FFB800] focus:bg-white focus:outline-none transition-all"
+                            >
+                        </div>
+
+                        <div>
+                            <label class="text-[11px] font-bold uppercase tracking-wider text-neutral-400 font-mono block mb-1.5">Problème résolu (Quel besoin couvre cette offre ?)</label>
+                            <input 
+                                type="text" 
+                                name="problem_solved" 
+                                placeholder="Ex: Manque de visibilité en ligne, absence de site marchand..." 
+                                class="w-full h-11 px-3 bg-[#F3F4F6] border-0 rounded-xl text-xs text-[#111111] focus:ring-2 focus:ring-[#FFB800] focus:bg-white focus:outline-none transition-all"
+                            >
+                        </div>
+                    </div>
+
+                    <div>
+                        <label class="text-[11px] font-bold uppercase tracking-wider text-neutral-400 font-mono block mb-1.5">Livrables inclus (un livrable par ligne)</label>
+                        <textarea 
+                            name="deliverables" 
+                            rows="2" 
+                            placeholder="Ex:&#10;Maquette interactive Figma&#10;Site responsive sous WordPress&#10;Session de formation de 30 min" 
+                            class="w-full p-3 bg-[#F3F4F6] border-0 rounded-xl text-xs text-[#111111] font-mono focus:ring-2 focus:ring-[#FFB800] focus:bg-white focus:outline-none transition-all resize-y"
+                        ></textarea>
+                    </div>
+
+                    <div>
+                        <label class="text-[11px] font-bold uppercase tracking-wider text-neutral-400 font-mono block mb-1.5">Déroulement / Étapes (une étape par ligne, format Titre: description)</label>
+                        <textarea 
+                            name="workflow_steps" 
+                            rows="2" 
+                            placeholder="Ex:&#10;Cadrage initial: Échange sur vos besoins et charte&#10;Conception: Réalisation de la première version&#10;Livraison: Déploiement et remise des accès" 
+                            class="w-full p-3 bg-[#F3F4F6] border-0 rounded-xl text-xs text-[#111111] font-mono focus:ring-2 focus:ring-[#FFB800] focus:bg-white focus:outline-none transition-all resize-y"
+                        ></textarea>
+                    </div>
+
+                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
+                        <div>
+                            <label class="text-[11px] font-bold uppercase tracking-wider text-neutral-400 font-mono block mb-1.5">Prérequis client (Ressources ou accès nécessaires)</label>
+                            <textarea 
+                                name="prerequisites" 
+                                rows="2" 
+                                placeholder="Ex: Textes et logo fournis par le client, accès hébergeur..." 
+                                class="w-full p-3 bg-[#F3F4F6] border-0 rounded-xl text-xs text-[#111111] focus:ring-2 focus:ring-[#FFB800] focus:bg-white focus:outline-none transition-all resize-y"
+                            ></textarea>
+                        </div>
+
+                        <div>
+                            <label class="text-[11px] font-bold uppercase tracking-wider text-neutral-400 font-mono block mb-1.5">Limites ou exclusions de la prestation</label>
+                            <textarea 
+                                name="exclusions" 
+                                rows="2" 
+                                placeholder="Ex: Hors coût de nom de domaine et hébergement, hors rédaction de contenu..." 
+                                class="w-full p-3 bg-[#F3F4F6] border-0 rounded-xl text-xs text-[#111111] focus:ring-2 focus:ring-[#FFB800] focus:bg-white focus:outline-none transition-all resize-y"
+                            ></textarea>
+                        </div>
                     </div>
                 </div>
 
-                <div>
-                    <label class="block text-xs font-bold text-neutral-700 mb-1">Tarif indicatif en FCFA (Optionnel)</label>
-                    <input type="number" min="0" step="1" name="price" placeholder="Ex: 75000 (laisser vide si sur devis)" class="w-full h-11 px-3 bg-[#FAF8F2] border border-[#E8E5DC] rounded-xl text-xs font-semibold">
-                </div>
-
-                <div>
-                    <label class="block text-xs font-bold text-neutral-700 mb-1">Description détaillée de la prestation (Optionnel)</label>
-                    <textarea name="description" rows="2" placeholder="Précisez le périmètre : livrables, technologies, bénéfices..." class="w-full p-3 bg-[#FAF8F2] border border-[#E8E5DC] rounded-xl text-xs"></textarea>
-                </div>
-
-                <!-- SECTION PRÉSENTATION COMMERCIALE ENRICHIE -->
-                <div class="p-3.5 bg-neutral-50 rounded-2xl border border-neutral-200 space-y-3">
-                    <span class="font-bold text-neutral-800 text-[11px] uppercase tracking-wider block">Présentation commerciale de la prestation (Optionnel)</span>
-                    
-                    <div>
-                        <label class="block text-xs font-bold text-neutral-700 mb-1">Public visé (À qui s'adresse cette prestation ?)</label>
-                        <input type="text" name="target_audience" placeholder="Ex: PME, créateurs de marques, e-commerçants..." class="w-full h-10 px-3 bg-white border border-[#E8E5DC] rounded-xl text-xs font-medium">
+                <!-- SECTION 4 : PREUVE FOURNIE / RÉFÉRENCE -->
+                <div class="space-y-4">
+                    <div class="flex items-center gap-2 border-b border-neutral-100 pb-1.5">
+                        <span class="w-1.5 h-3.5 rounded-full bg-[#FFB800]"></span>
+                        <span class="text-[11px] font-black uppercase tracking-wider text-neutral-800 font-mono">4. Preuve Fournie & Référence</span>
                     </div>
 
                     <div>
-                        <label class="block text-xs font-bold text-neutral-700 mb-1">Problème résolu (Quel besoin couvre cette offre ?)</label>
-                        <input type="text" name="problem_solved" placeholder="Ex: Manque de visibilité en ligne, absence de site marchand..." class="w-full h-10 px-3 bg-white border border-[#E8E5DC] rounded-xl text-xs font-medium">
-                    </div>
-
-                    <div>
-                        <label class="block text-xs font-bold text-neutral-700 mb-1">Livrables inclus (un livrable par ligne)</label>
-                        <textarea name="deliverables" rows="2" placeholder="Ex:&#10;Maquette interactive Figma&#10;Site responsive sous WordPress&#10;Session de formation de 30 min" class="w-full p-2.5 bg-white border border-[#E8E5DC] rounded-xl text-xs font-mono"></textarea>
-                    </div>
-
-                    <div>
-                        <label class="block text-xs font-bold text-neutral-700 mb-1">Déroulement / Étapes (une étape par ligne, format Titre: description)</label>
-                        <textarea name="workflow_steps" rows="2" placeholder="Ex:&#10;Cadrage initial: Échange sur vos besoins et charte&#10;Conception: Réalisation de la première version&#10;Livraison: Déploiement et remise des accès" class="w-full p-2.5 bg-white border border-[#E8E5DC] rounded-xl text-xs font-mono"></textarea>
-                    </div>
-
-                    <div>
-                        <label class="block text-xs font-bold text-neutral-700 mb-1">Prérequis client (Ressources ou accès nécessaires)</label>
-                        <textarea name="prerequisites" rows="2" placeholder="Ex: Textes et logo fournis par le client, accès hébergeur..." class="w-full p-2.5 bg-white border border-[#E8E5DC] rounded-xl text-xs"></textarea>
-                    </div>
-
-                    <div>
-                        <label class="block text-xs font-bold text-neutral-700 mb-1">Limites ou exclusions de la prestation</label>
-                        <textarea name="exclusions" rows="2" placeholder="Ex: Hors coût de nom de domaine et hébergement, hors rédaction de contenu..." class="w-full p-2.5 bg-white border border-[#E8E5DC] rounded-xl text-xs"></textarea>
+                        <label class="text-[11px] font-bold uppercase tracking-wider text-neutral-400 font-mono block mb-1.5">Preuve fournie / Référence (Lien GitHub, URL ou détails)</label>
+                        <textarea 
+                            name="proof_description" 
+                            rows="2" 
+                            required
+                            placeholder="Lien vers dépôt GitHub, démo en ligne ou attestation (ex: http://127.0.0.1:8000/prestation/14)..." 
+                            class="w-full p-3 bg-[#F3F4F6] border-0 rounded-xl text-xs text-[#111111] font-mono focus:ring-2 focus:ring-[#FFB800] focus:bg-white focus:outline-none transition-all resize-y"
+                        ></textarea>
                     </div>
                 </div>
 
-                <div>
-                    <label class="block text-xs font-bold text-neutral-700 mb-1">Preuve fournie / Référence (Lien GitHub, URL ou détails) *</label>
-                    <textarea name="proof_description" rows="2" required placeholder="Lien vers dépôt, démo en ligne ou attestation..." class="w-full p-3 bg-[#FAF8F2] border border-[#E8E5DC] rounded-xl text-xs"></textarea>
-                </div>
-
-                <div class="flex items-center gap-2 pt-2">
-                    <button type="submit" class="flex-1 h-11 bg-black hover:bg-[#FFB515] hover:text-black text-white font-extrabold text-xs rounded-xl transition-all">
-                        {{ $candidate->status === 'valide' ? 'Enregistrer et publier sur mon profil' : 'Soumettre au comité technique' }}
-                    </button>
-                    <button type="button" @click="showAddSkillModal = false" class="h-11 px-4 border border-neutral-300 text-xs font-bold rounded-xl">
+                <!-- ACTIONS FOOTER -->
+                <div class="flex items-center justify-between gap-3 pt-3 border-t border-neutral-100">
+                    <button type="button" @click="showAddSkillModal = false" class="text-xs font-bold text-neutral-400 hover:text-black px-3 py-2.5 transition cursor-pointer">
                         Annuler
+                    </button>
+                    <button type="submit" class="h-11 px-6 bg-black hover:bg-[#FFB800] hover:text-black text-white font-extrabold text-xs rounded-xl transition-all cursor-pointer shadow-sm">
+                        Enregistrer et publier
                     </button>
                 </div>
             </form>
@@ -1824,33 +2255,91 @@
     >
         <div 
             @click.away="showEditSkillModal = false"
-            class="bg-white rounded-3xl max-w-lg w-full p-6 space-y-4 border border-neutral-200 shadow-2xl max-h-[90vh] overflow-y-auto"
+            class="bg-white rounded-[20px] max-w-[680px] w-full p-6 sm:p-7 space-y-6 border border-neutral-100 shadow-2xl max-h-[90vh] overflow-y-auto"
         >
-            <div class="flex items-start justify-between border-b border-neutral-100 pb-3">
+            <!-- HEADER -->
+            <div class="flex items-center justify-between border-b border-neutral-100 pb-3">
                 <div>
-                    <h3 class="text-base font-black text-black">Modifier la compétence</h3>
-                    <p class="text-xs text-neutral-500" x-text="editingSkill.name || 'Mise à jour de la prestation'"></p>
+                    <h3 class="text-base font-extrabold text-[#111111]">Modifier la compétence</h3>
+                    <p class="text-xs text-neutral-500 font-medium mt-0.5" x-text="editingSkill.name || 'Mise à jour de la prestation'"></p>
                 </div>
-                <button @click="showEditSkillModal = false" class="text-neutral-400 hover:text-black font-bold text-lg">&times;</button>
+                <button @click="showEditSkillModal = false" class="text-neutral-400 hover:text-black font-bold text-xl leading-none cursor-pointer">&times;</button>
             </div>
 
-            <form :action="'{{ url('/candidat/competence') }}/' + editingSkill.id + '/update'" method="POST" enctype="multipart/form-data" class="space-y-4">
+            <form :action="'{{ url('/candidat/competence') }}/' + editingSkill.id + '/update'" method="POST" enctype="multipart/form-data" class="space-y-6">
                 @csrf
 
-                <!-- SECTION MINIATURE VISUELLE EDIT -->
-                <div class="p-3.5 bg-neutral-50 rounded-2xl border border-neutral-200 space-y-3">
-                    <span class="font-bold text-neutral-800 text-[11px] uppercase tracking-wider block">Miniature visuelle de la prestation</span>
-                    
+                <!-- SECTION 1 : INFORMATIONS ESSENTIELLES -->
+                <div class="space-y-4">
+                    <div class="flex items-center gap-2 border-b border-neutral-100 pb-1.5">
+                        <span class="w-1.5 h-3.5 rounded-full bg-[#FFB800]"></span>
+                        <span class="text-[11px] font-black uppercase tracking-wider text-neutral-800 font-mono">1. Informations Générales</span>
+                    </div>
+
+                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
+                        <div>
+                            <label class="text-[11px] font-bold uppercase tracking-wider text-neutral-400 font-mono block mb-1.5">Intitulé de la compétence</label>
+                            <input 
+                                type="text" 
+                                name="name" 
+                                x-model="editingSkill.name" 
+                                required 
+                                placeholder="Ex: Articles de blog" 
+                                class="w-full h-11 px-3 bg-[#F3F4F6] border-0 rounded-xl text-xs font-semibold text-[#111111] focus:ring-2 focus:ring-[#FFB800] focus:bg-white focus:outline-none transition-all"
+                            >
+                        </div>
+                        <div>
+                            <label class="text-[11px] font-bold uppercase tracking-wider text-neutral-400 font-mono block mb-1.5">Catégorie</label>
+                            <select 
+                                name="category" 
+                                x-model="editingSkill.category" 
+                                required 
+                                class="w-full h-11 px-3 bg-[#F3F4F6] border-0 rounded-xl text-xs font-semibold text-[#111111] focus:ring-2 focus:ring-[#FFB800] focus:bg-white focus:outline-none transition-all"
+                            >
+                                <template x-for="(skills, catName) in officialCategories" :key="catName">
+                                    <option :value="catName" x-text="catName" :selected="editingSkill.category === catName"></option>
+                                </template>
+                            </select>
+                        </div>
+                    </div>
+
+                    <div class="grid grid-cols-1 sm:grid-cols-3 gap-3.5">
+                        <div>
+                            <label class="text-[11px] font-bold uppercase tracking-wider text-neutral-400 font-mono block mb-1.5">Niveau d'expertise</label>
+                            <select name="level" x-model="editingSkill.level" required class="w-full h-11 px-3 bg-[#F3F4F6] border-0 rounded-xl text-xs font-semibold text-[#111111] focus:ring-2 focus:ring-[#FFB800] focus:bg-white focus:outline-none transition-all">
+                                <option value="Intermédiaire">Intermédiaire (1 à 2 ans)</option>
+                                <option value="Avancé">Avancé (3 à 5 ans)</option>
+                                <option value="Senior / Expert">Senior / Expert (+ de 5 ans)</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label class="text-[11px] font-bold uppercase tracking-wider text-neutral-400 font-mono block mb-1.5">Délai indicatif</label>
+                            <input type="text" name="delivery_time" x-model="editingSkill.delivery_time" placeholder="Ex: 3 jours, 1 semaine" class="w-full h-11 px-3 bg-[#F3F4F6] border-0 rounded-xl text-xs font-semibold text-[#111111] focus:ring-2 focus:ring-[#FFB800] focus:bg-white focus:outline-none transition-all">
+                        </div>
+                        <div>
+                            <label class="text-[11px] font-bold uppercase tracking-wider text-neutral-400 font-mono block mb-1.5">Tarif en FCFA</label>
+                            <input type="number" min="0" step="1" name="price" x-model="editingSkill.price_raw" placeholder="Ex: 75000" class="w-full h-11 px-3 bg-[#F3F4F6] border-0 rounded-xl text-xs font-semibold text-[#111111] focus:ring-2 focus:ring-[#FFB800] focus:bg-white focus:outline-none transition-all">
+                        </div>
+                    </div>
+                </div>
+
+                <!-- SECTION 2 : MINIATURE VISUELLE EDIT -->
+                <div class="space-y-4">
+                    <div class="flex items-center gap-2 border-b border-neutral-100 pb-1.5">
+                        <span class="w-1.5 h-3.5 rounded-full bg-[#FFB800]"></span>
+                        <span class="text-[11px] font-black uppercase tracking-wider text-neutral-800 font-mono">2. Miniature Visuelle de la Prestation</span>
+                    </div>
+
                     <template x-if="editingSkill.thumbnail">
-                        <div class="p-3 bg-white rounded-xl border border-neutral-200 flex items-center justify-between gap-3">
-                            <div class="flex items-center gap-3">
-                                <img :src="editingSkill.thumbnail_url || editingSkill.thumbnail" alt="Miniature actuelle" class="w-14 h-14 rounded-lg object-cover border border-neutral-200">
-                                <div>
-                                    <span class="text-xs font-bold text-neutral-800 block">Miniature active</span>
-                                    <span class="text-[10px] text-neutral-500 block truncate max-w-[200px]" x-text="editingSkill.thumbnail"></span>
+                        <div class="p-3 bg-[#F3F4F6] rounded-xl flex items-center justify-between gap-3">
+                            <div class="flex items-center gap-3 min-w-0">
+                                <img :src="editingSkill.thumbnail_url || editingSkill.thumbnail" alt="Miniature" class="w-12 h-12 rounded-lg object-cover border border-neutral-200 flex-shrink-0">
+                                <div class="min-w-0">
+                                    <span class="text-xs font-bold text-neutral-800 block truncate">Miniature active</span>
+                                    <span class="text-[10px] text-neutral-400 block truncate max-w-[240px]" x-text="editingSkill.thumbnail"></span>
                                 </div>
                             </div>
-                            <label class="flex items-center gap-1.5 cursor-pointer text-rose-600 hover:text-rose-800 text-xs font-bold">
+                            <label class="flex items-center gap-1.5 cursor-pointer text-rose-600 hover:text-rose-800 text-xs font-semibold shrink-0">
                                 <input type="checkbox" name="remove_thumbnail" value="1" class="rounded text-rose-600 focus:ring-rose-500">
                                 <span>Supprimer</span>
                             </label>
@@ -1858,14 +2347,14 @@
                     </template>
 
                     <div>
-                        <label class="block text-xs font-bold text-neutral-700 mb-1" x-text="editingSkill.thumbnail ? 'Remplacer par une nouvelle image' : 'Téléverser une image (JPG, PNG, WEBP — max 5 Mo)'"></label>
-                        <input type="file" name="thumbnail" accept="image/jpeg,image/png,image/webp" class="w-full text-xs text-neutral-600 file:mr-3 file:py-2 file:px-4 file:rounded-xl file:border-0 file:text-xs file:font-bold file:bg-neutral-200 hover:file:bg-[#FFB515] file:cursor-pointer">
+                        <label class="text-[11px] font-bold uppercase tracking-wider text-neutral-400 font-mono block mb-1.5" x-text="editingSkill.thumbnail ? 'Remplacer par une nouvelle image (JPG, PNG, WEBP — max 5 Mo)' : 'Téléverser une image (JPG, PNG, WEBP — max 5 Mo)'"></label>
+                        <input type="file" name="thumbnail" accept="image/jpeg,image/png,image/webp" class="w-full text-xs text-neutral-600 file:mr-3 file:py-2.5 file:px-4 file:rounded-xl file:border-0 file:text-xs file:font-bold file:bg-[#F3F4F6] hover:file:bg-[#FFB800] file:text-neutral-900 file:cursor-pointer transition-all">
                     </div>
 
                     @if (!empty($publishedRealizations) && $publishedRealizations->count() > 0)
-                        <div class="pt-2 border-t border-neutral-200">
-                            <label class="block text-xs font-bold text-neutral-700 mb-1">Ou associer une réalisation validée</label>
-                            <select name="realization_id" class="w-full h-10 px-3 bg-white border border-[#E8E5DC] rounded-xl text-xs font-medium">
+                        <div>
+                            <label class="text-[11px] font-bold uppercase tracking-wider text-neutral-400 font-mono block mb-1.5">Ou associer une réalisation validée</label>
+                            <select name="realization_id" class="w-full h-11 px-3 bg-[#F3F4F6] border-0 rounded-xl text-xs font-medium text-[#111111] focus:ring-2 focus:ring-[#FFB800] focus:bg-white focus:outline-none transition-all">
                                 <option value="">-- Conserver l'état actuel --</option>
                                 @foreach ($publishedRealizations as $pubReal)
                                     <option value="{{ $pubReal->id }}">{{ $pubReal->title }}</option>
@@ -1874,99 +2363,131 @@
                         </div>
                     @endif
                 </div>
-                <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                    <div>
-                        <label class="block text-xs font-bold text-neutral-700 mb-1">Intitulé de la compétence *</label>
-                        <input type="text" name="name" x-model="editingSkill.name" required class="w-full h-11 px-3 bg-[#FAF8F2] border border-[#E8E5DC] rounded-xl text-xs font-semibold">
+
+                <!-- SECTION 3 : PRÉSENTATION COMMERCIALE DÉTAILLÉE -->
+                <div class="space-y-4">
+                    <div class="flex items-center gap-2 border-b border-neutral-100 pb-1.5">
+                        <span class="w-1.5 h-3.5 rounded-full bg-[#FFB800]"></span>
+                        <span class="text-[11px] font-black uppercase tracking-wider text-neutral-800 font-mono">3. Présentation Commerciale</span>
                     </div>
+
                     <div>
-                        <label class="block text-xs font-bold text-neutral-700 mb-1">Catégorie *</label>
-                        <select name="category" x-model="editingSkill.category" required class="w-full h-11 px-3 bg-[#FAF8F2] border border-[#E8E5DC] rounded-xl text-xs font-semibold">
-                            <template x-for="(skills, catName) in officialCategories" :key="catName">
-                                <option :value="catName" x-text="catName" :selected="editingSkill.category === catName"></option>
-                            </template>
-                        </select>
+                        <label class="text-[11px] font-bold uppercase tracking-wider text-neutral-400 font-mono block mb-1.5">Description détaillée de la prestation</label>
+                        <textarea 
+                            name="description" 
+                            x-model="editingSkill.description" 
+                            rows="3" 
+                            placeholder="Présentez le contenu et les bénéfices de cette prestation..." 
+                            class="w-full p-3 bg-[#F3F4F6] border-0 rounded-xl text-xs text-[#111111] focus:ring-2 focus:ring-[#FFB800] focus:bg-white focus:outline-none transition-all resize-y"
+                        ></textarea>
+                    </div>
+
+                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
+                        <div>
+                            <label class="text-[11px] font-bold uppercase tracking-wider text-neutral-400 font-mono block mb-1.5">Public visé (À qui s'adresse cette prestation ?)</label>
+                            <input 
+                                type="text" 
+                                name="target_audience" 
+                                x-model="editingSkill.target_audience" 
+                                placeholder="Ex: PME, créateurs de marques, e-commerçants..." 
+                                class="w-full h-11 px-3 bg-[#F3F4F6] border-0 rounded-xl text-xs text-[#111111] focus:ring-2 focus:ring-[#FFB800] focus:bg-white focus:outline-none transition-all"
+                            >
+                        </div>
+
+                        <div>
+                            <label class="text-[11px] font-bold uppercase tracking-wider text-neutral-400 font-mono block mb-1.5">Problème résolu (Quel besoin couvre cette offre ?)</label>
+                            <input 
+                                type="text" 
+                                name="problem_solved" 
+                                x-model="editingSkill.problem_solved" 
+                                placeholder="Ex: Manque de visibilité en ligne, absence de site marchand..." 
+                                class="w-full h-11 px-3 bg-[#F3F4F6] border-0 rounded-xl text-xs text-[#111111] focus:ring-2 focus:ring-[#FFB800] focus:bg-white focus:outline-none transition-all"
+                            >
+                        </div>
+                    </div>
+
+                    <div>
+                        <label class="text-[11px] font-bold uppercase tracking-wider text-neutral-400 font-mono block mb-1.5">Livrables inclus (un livrable par ligne)</label>
+                        <textarea 
+                            name="deliverables" 
+                            x-model="editingSkill.deliverables_text" 
+                            rows="2" 
+                            placeholder="Ex:&#10;Maquette interactive Figma&#10;Site responsive sous WordPress&#10;Session de formation de 30 min" 
+                            class="w-full p-3 bg-[#F3F4F6] border-0 rounded-xl text-xs text-[#111111] font-mono focus:ring-2 focus:ring-[#FFB800] focus:bg-white focus:outline-none transition-all resize-y"
+                        ></textarea>
+                    </div>
+
+                    <div>
+                        <label class="text-[11px] font-bold uppercase tracking-wider text-neutral-400 font-mono block mb-1.5">Déroulement / Étapes (une étape par ligne, format Titre: description)</label>
+                        <textarea 
+                            name="workflow_steps" 
+                            x-model="editingSkill.workflow_steps_text" 
+                            rows="2" 
+                            placeholder="Ex:&#10;Cadrage initial: Échange sur vos besoins et charte&#10;Conception: Réalisation de la première version&#10;Livraison: Déploiement et remise des accès" 
+                            class="w-full p-3 bg-[#F3F4F6] border-0 rounded-xl text-xs text-[#111111] font-mono focus:ring-2 focus:ring-[#FFB800] focus:bg-white focus:outline-none transition-all resize-y"
+                        ></textarea>
+                    </div>
+
+                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
+                        <div>
+                            <label class="text-[11px] font-bold uppercase tracking-wider text-neutral-400 font-mono block mb-1.5">Prérequis client (Ressources ou accès nécessaires)</label>
+                            <textarea 
+                                name="prerequisites" 
+                                x-model="editingSkill.prerequisites" 
+                                rows="2" 
+                                placeholder="Ex: Textes et logo fournis par le client, accès hébergeur..." 
+                                class="w-full p-3 bg-[#F3F4F6] border-0 rounded-xl text-xs text-[#111111] focus:ring-2 focus:ring-[#FFB800] focus:bg-white focus:outline-none transition-all resize-y"
+                            ></textarea>
+                        </div>
+
+                        <div>
+                            <label class="text-[11px] font-bold uppercase tracking-wider text-neutral-400 font-mono block mb-1.5">Limites ou exclusions de la prestation</label>
+                            <textarea 
+                                name="exclusions" 
+                                x-model="editingSkill.exclusions" 
+                                rows="2" 
+                                placeholder="Ex: Hors coût de nom de domaine et hébergement, hors rédaction de contenu..." 
+                                class="w-full p-3 bg-[#F3F4F6] border-0 rounded-xl text-xs text-[#111111] focus:ring-2 focus:ring-[#FFB800] focus:bg-white focus:outline-none transition-all resize-y"
+                            ></textarea>
+                        </div>
                     </div>
                 </div>
 
-                <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                    <div>
-                        <label class="block text-xs font-bold text-neutral-700 mb-1">Niveau d'expertise *</label>
-                        <select name="level" x-model="editingSkill.level" required class="w-full h-11 px-3 bg-[#FAF8F2] border border-[#E8E5DC] rounded-xl text-xs font-semibold">
-                            <option value="Intermédiaire">Intermédiaire (1 à 2 ans de pratique)</option>
-                            <option value="Avancé">Avancé (3 à 5 ans de pratique)</option>
-                            <option value="Senior / Expert">Senior / Expert (+ de 5 ans)</option>
-                        </select>
-                    </div>
-                    <div>
-                        <label class="block text-xs font-bold text-neutral-700 mb-1">Délai indicatif</label>
-                        <input type="text" name="delivery_time" x-model="editingSkill.delivery_time" placeholder="Ex: 3 jours, 1 semaine" class="w-full h-11 px-3 bg-[#FAF8F2] border border-[#E8E5DC] rounded-xl text-xs font-semibold">
-                    </div>
-                </div>
-
-                <div>
-                    <label class="block text-xs font-bold text-neutral-700 mb-1">Tarif indicatif en FCFA (Optionnel)</label>
-                    <input type="number" min="0" step="1" name="price" x-model="editingSkill.price_raw" placeholder="Ex: 75000" class="w-full h-11 px-3 bg-[#FAF8F2] border border-[#E8E5DC] rounded-xl text-xs font-semibold">
-                </div>
-
-                <div>
-                    <label class="block text-xs font-bold text-neutral-700 mb-1">Description détaillée de la prestation</label>
-                    <textarea name="description" x-model="editingSkill.description" rows="3" placeholder="Présentez le contenu et les bénéfices de cette prestation..." class="w-full p-3 bg-[#FAF8F2] border border-[#E8E5DC] rounded-xl text-xs"></textarea>
-                </div>
-
-                <!-- SECTION PRÉSENTATION COMMERCIALE ENRICHIE EDIT -->
-                <div class="p-3.5 bg-neutral-50 rounded-2xl border border-neutral-200 space-y-3">
-                    <span class="font-bold text-neutral-800 text-[11px] uppercase tracking-wider block">Présentation commerciale détaillée (Optionnel)</span>
-                    
-                    <div>
-                        <label class="block text-xs font-bold text-neutral-700 mb-1">Public visé (À qui s'adresse cette prestation ?)</label>
-                        <input type="text" name="target_audience" x-model="editingSkill.target_audience" placeholder="Ex: PME, créateurs de marques, e-commerçants..." class="w-full h-10 px-3 bg-white border border-[#E8E5DC] rounded-xl text-xs font-medium">
+                <!-- SECTION 4 : PREUVE FOURNIE / RÉFÉRENCE -->
+                <div class="space-y-4">
+                    <div class="flex items-center gap-2 border-b border-neutral-100 pb-1.5">
+                        <span class="w-1.5 h-3.5 rounded-full bg-[#FFB800]"></span>
+                        <span class="text-[11px] font-black uppercase tracking-wider text-neutral-800 font-mono">4. Preuve Fournie & Référence</span>
                     </div>
 
                     <div>
-                        <label class="block text-xs font-bold text-neutral-700 mb-1">Problème résolu (Quel besoin couvre cette offre ?)</label>
-                        <input type="text" name="problem_solved" x-model="editingSkill.problem_solved" placeholder="Ex: Manque de visibilité en ligne, absence de site marchand..." class="w-full h-10 px-3 bg-white border border-[#E8E5DC] rounded-xl text-xs font-medium">
-                    </div>
-
-                    <div>
-                        <label class="block text-xs font-bold text-neutral-700 mb-1">Livrables inclus (un livrable par ligne)</label>
-                        <textarea name="deliverables" x-model="editingSkill.deliverables_text" rows="2" placeholder="Ex:&#10;Maquette interactive Figma&#10;Site responsive sous WordPress&#10;Session de formation de 30 min" class="w-full p-2.5 bg-white border border-[#E8E5DC] rounded-xl text-xs font-mono"></textarea>
-                    </div>
-
-                    <div>
-                        <label class="block text-xs font-bold text-neutral-700 mb-1">Déroulement / Étapes (une étape par ligne, format Titre: description)</label>
-                        <textarea name="workflow_steps" x-model="editingSkill.workflow_steps_text" rows="2" placeholder="Ex:&#10;Cadrage initial: Échange sur vos besoins et charte&#10;Conception: Réalisation de la première version&#10;Livraison: Déploiement et remise des accès" class="w-full p-2.5 bg-white border border-[#E8E5DC] rounded-xl text-xs font-mono"></textarea>
-                    </div>
-
-                    <div>
-                        <label class="block text-xs font-bold text-neutral-700 mb-1">Prérequis client (Ressources ou accès nécessaires)</label>
-                        <textarea name="prerequisites" x-model="editingSkill.prerequisites" rows="2" placeholder="Ex: Textes et logo fournis par le client, accès hébergeur..." class="w-full p-2.5 bg-white border border-[#E8E5DC] rounded-xl text-xs"></textarea>
-                    </div>
-
-                    <div>
-                        <label class="block text-xs font-bold text-neutral-700 mb-1">Limites ou exclusions de la prestation</label>
-                        <textarea name="exclusions" x-model="editingSkill.exclusions" rows="2" placeholder="Ex: Hors coût de nom de domaine et hébergement, hors rédaction de contenu..." class="w-full p-2.5 bg-white border border-[#E8E5DC] rounded-xl text-xs"></textarea>
+                        <label class="text-[11px] font-bold uppercase tracking-wider text-neutral-400 font-mono block mb-1.5">Preuve / Référence / Dépôt (Lien GitHub, URL ou détails)</label>
+                        <textarea 
+                            name="proof_summary" 
+                            x-model="editingSkill.proof_title" 
+                            rows="2" 
+                            placeholder="Lien vers démo en ligne, dépôt GitHub ou attestation..." 
+                            class="w-full p-3 bg-[#F3F4F6] border-0 rounded-xl text-xs text-[#111111] font-mono focus:ring-2 focus:ring-[#FFB800] focus:bg-white focus:outline-none transition-all resize-y"
+                        ></textarea>
                     </div>
                 </div>
 
-                <div>
-                    <label class="block text-xs font-bold text-neutral-700 mb-1">Preuve / Référence / Dépôt (Optionnel)</label>
-                    <textarea name="proof_summary" x-model="editingSkill.proof_title" rows="2" placeholder="Lien vers démo, GitHub ou détails..." class="w-full p-3 bg-[#FAF8F2] border border-[#E8E5DC] rounded-xl text-xs"></textarea>
-                </div>
-
-                <div class="flex items-center gap-2 pt-2 flex-wrap">
-                    <button type="submit" class="flex-1 h-11 bg-black hover:bg-[#FFB515] hover:text-black text-white font-extrabold text-xs rounded-xl transition-all cursor-pointer">
+                <!-- ACTIONS FOOTER EDIT -->
+                <div class="flex items-center justify-between gap-3 pt-3 border-t border-neutral-100 flex-wrap">
+                    <div class="flex items-center gap-2">
+                        <button 
+                            type="button" 
+                            @click="if (confirm('Confirmez-vous vouloir supprimer cette compétence ? Cette action est irréversible.')) { document.getElementById('delete-skill-form').submit(); }"
+                            class="h-10 px-3.5 bg-rose-50 hover:bg-rose-100 text-rose-600 text-xs font-bold rounded-xl transition cursor-pointer"
+                        >
+                            Supprimer
+                        </button>
+                        <button type="button" @click="showEditSkillModal = false" class="text-xs font-bold text-neutral-400 hover:text-black px-3 py-2 transition cursor-pointer">
+                            Annuler
+                        </button>
+                    </div>
+                    <button type="submit" class="h-11 px-6 bg-black hover:bg-[#FFB800] hover:text-black text-white font-extrabold text-xs rounded-xl transition-all cursor-pointer shadow-sm">
                         Enregistrer les modifications
-                    </button>
-                    <button 
-                        type="button" 
-                        @click="if (confirm('Confirmez-vous vouloir supprimer cette compétence ? Cette action est irréversible.')) { document.getElementById('delete-skill-form').submit(); }"
-                        class="h-11 px-4 bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-200 text-xs font-bold rounded-xl transition-all cursor-pointer"
-                    >
-                        Supprimer
-                    </button>
-                    <button type="button" @click="showEditSkillModal = false" class="h-11 px-4 border border-neutral-300 text-xs font-bold rounded-xl cursor-pointer">
-                        Annuler
                     </button>
                 </div>
             </form>
@@ -2082,3 +2603,4 @@
 
 </body>
 </html>
+

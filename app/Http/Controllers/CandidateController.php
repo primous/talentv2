@@ -7,6 +7,7 @@ use App\Mail\ProjectRequestClientConfirmationMail;
 use App\Mail\ProjectRequestTalentNotificationMail;
 use App\Mail\ProjectRequestAcceptedClientMail;
 use App\Mail\ProjectRequestDeclinedClientMail;
+use App\Mail\ProjectRequestProposalClientMail;
 use App\Mail\ProjectStepNotificationMail;
 use App\Mail\ProjectStepClientActionNotificationMail;
 use App\Models\AdminActivityLog;
@@ -533,11 +534,12 @@ class CandidateController extends Controller
     public static function getTalentBackofficeData(Candidate $candidate): array
     {
         // 1. Récupération des demandes de projets réelles affectées à ce talent (sécurité et isolation strictes)
-        $rawRequests = ProjectRequest::where('candidate_id', $candidate->id)
+        $rawRequests = ProjectRequest::with(['competency', 'steps'])
+            ->where('candidate_id', $candidate->id)
             ->orderBy('created_at', 'desc')
             ->get();
 
-        $formatProject = function (ProjectRequest $pr, string $uiStatus) {
+        $formatProject = function (ProjectRequest $pr) {
             $words = explode(' ', trim($pr->client_name));
             $avatar = '';
             foreach (array_slice($words, 0, 2) as $w) {
@@ -546,6 +548,64 @@ class CandidateController extends Controller
             if (empty($avatar)) $avatar = 'CL';
 
             $budgetNum = (int) preg_replace('/[^0-9]/', '', $pr->budget ?? '0');
+
+            // Détermination du statut UI normalisé
+            $uiStatus = match ($pr->status) {
+                'recue', 'contacte' => is_null($pr->talent_responded_at) ? 'a_traiter' : 'repondues',
+                'reponse_talent' => 'repondues',
+                'mission_confirmee' => 'acceptees',
+                'en_cours' => 'en_cours',
+                'terminee' => 'terminees',
+                'annulee' => 'annulees',
+                default => 'a_traiter',
+            };
+
+            // Récupération des fichiers transmis par le client dans les étapes
+            $clientFiles = [];
+            $deliverableFiles = [];
+            if ($pr->relationLoaded('steps') || $pr->steps()->exists()) {
+                foreach ($pr->steps as $step) {
+                    foreach ($step->getClientFilesList() as $cf) {
+                        $clientFiles[] = [
+                            'name' => $cf['name'],
+                            'step_title' => $step->title,
+                            'size' => $cf['size'],
+                            'size_formatted' => $cf['size'] ? round($cf['size'] / 1024) . ' Ko' : null,
+                            'download_url' => route('candidat.projets.steps.download_file', [
+                                'id' => $pr->id,
+                                'stepId' => $step->id,
+                                'type' => 'client',
+                                'fileIndex' => $cf['index'],
+                            ]),
+                        ];
+                    }
+                    foreach ($step->getDeliverableFilesList() as $df) {
+                        $deliverableFiles[] = [
+                            'name' => $df['name'],
+                            'step_title' => $step->title,
+                            'size' => $df['size'],
+                            'size_formatted' => $df['size'] ? round($df['size'] / 1024) . ' Ko' : null,
+                            'download_url' => route('candidat.projets.steps.download_file', [
+                                'id' => $pr->id,
+                                'stepId' => $step->id,
+                                'type' => 'deliverable',
+                                'fileIndex' => $df['index'],
+                            ]),
+                        ];
+                    }
+                }
+            }
+
+            // Calcul de la dernière date d'activité
+            $timestamps = array_filter([
+                $pr->created_at?->timestamp,
+                $pr->talent_responded_at?->timestamp,
+                $pr->mission_confirmed_at?->timestamp,
+                $pr->completed_at?->timestamp,
+                $pr->updated_at?->timestamp,
+            ]);
+            $lastActivityTs = !empty($timestamps) ? max($timestamps) : null;
+            $lastActivityDate = $lastActivityTs ? \Carbon\Carbon::createFromTimestamp($lastActivityTs) : $pr->created_at;
 
             return [
                 'id' => $pr->id,
@@ -563,9 +623,19 @@ class CandidateController extends Controller
                 'budget_num' => $budgetNum,
                 'deadline' => $pr->deadline ?? 'À convenir',
                 'created_at_human' => $pr->created_at ? $pr->created_at->diffForHumans() : 'Récemment',
+                'created_at_formatted' => $pr->created_at ? $pr->created_at->format('d/m/Y à H:i') : '—',
+                'created_at_date' => $pr->created_at ? $pr->created_at->format('d/m/Y') : '—',
                 'status' => $uiStatus,
+                'legacy_status' => match($uiStatus) {
+                    'a_traiter' => 'nouvelle',
+                    'repondues' => 'en_attente',
+                    'acceptees', 'en_cours' => 'en_cours',
+                    'terminees' => 'terminee',
+                    default => 'terminee',
+                },
                 'db_status' => $pr->status,
                 'status_label' => $pr->getStatusLabel(),
+                'status_badge_class' => $pr->getStatusBadgeClass(),
                 'description' => $pr->need_description,
                 'need_description' => $pr->need_description,
                 'expected_deliverable' => $pr->expected_deliverable,
@@ -579,34 +649,78 @@ class CandidateController extends Controller
                 'reference_links' => $pr->reference_links,
                 'craft_questions' => $pr->craft_questions,
                 'competency_name' => $pr->competency?->name,
-                'requirements' => [$pr->category, 'Mission Talent Club'],
-                'has_quote' => !empty($pr->talent_response_notes),
+                'requirements' => array_values(array_filter([$pr->category, $pr->competency?->name, 'Mission Talent Club'])),
+                'has_quote' => !empty($pr->talent_response_notes) || !is_null($pr->talent_responded_at),
                 'quote_amount' => $pr->budget ?? 'Non précisé',
                 'talent_response_notes' => $pr->talent_response_notes,
+                'talent_responded_at_formatted' => $pr->talent_responded_at ? $pr->talent_responded_at->format('d/m/Y à H:i') : null,
+                'mission_confirmed_at_formatted' => $pr->mission_confirmed_at ? $pr->mission_confirmed_at->format('d/m/Y à H:i') : null,
+                'completed_at_formatted' => $pr->completed_at ? $pr->completed_at->format('d/m/Y à H:i') : null,
+                'last_activity_formatted' => $lastActivityDate ? $lastActivityDate->diffForHumans() : 'Récemment',
+                'last_activity_date' => $lastActivityDate ? $lastActivityDate->format('d/m/Y à H:i') : '—',
                 'progress' => $pr->calculateProgress(),
                 'has_steps' => $pr->hasSteps(),
+                'steps_count' => $pr->steps->count(),
                 'pending_client_actions' => $pr->getPendingClientActionsCount(),
+                'client_files' => $clientFiles,
+                'deliverable_files' => $deliverableFiles,
+                'can_respond' => in_array($pr->status, ['recue', 'contacte']) && is_null($pr->talent_responded_at),
+                'can_track' => in_array($pr->status, ['mission_confirmee', 'en_cours', 'terminee']) || $pr->hasSteps(),
+                'tracking_url' => route('candidat.projets.tracking', $pr->id),
             ];
         };
 
         $projectRequests = [
-            'nouvelles' => [],
-            'en_attente' => [],
-            'en_cours' => [],
-            'terminees' => [],
+            'nouvelles' => [],      // Rétrocompatibilité : a_traiter (recue, contacte)
+            'en_attente' => [],     // Rétrocompatibilité : réponses envoyées
+            'en_cours' => [],       // Rétrocompatibilité : acceptées et en cours
+            'terminees' => [],      // Rétrocompatibilité : terminées uniquement (annulées strictement exclues !)
+            'a_traiter' => [],      // Nouvelles demandes nécessitant action
+            'repondues' => [],      // Réponses du talent transmises (en attente client)
+            'acceptees' => [],      // Missions confirmées
+            'en_cours_only' => [],  // Missions strictement en cours d'exécution
+            'terminees_only' => [], // Missions terminées & livrées
+            'annulees' => [],       // Demandes annulées, refusées ou déclinées
+            'all' => [],            // Toutes les demandes ordonnées par priorité
         ];
 
         foreach ($rawRequests as $pr) {
-            if (in_array($pr->status, ['recue', 'contacte'])) {
-                $projectRequests['nouvelles'][] = $formatProject($pr, 'nouvelle');
-            } elseif ($pr->status === 'reponse_talent') {
-                $projectRequests['en_attente'][] = $formatProject($pr, 'en_attente');
-            } elseif (in_array($pr->status, ['mission_confirmee', 'en_cours'])) {
-                $projectRequests['en_cours'][] = $formatProject($pr, 'en_cours');
-            } else {
-                $projectRequests['terminees'][] = $formatProject($pr, 'terminee');
+            $formatted = $formatProject($pr);
+
+            if ($formatted['status'] === 'a_traiter') {
+                $projectRequests['a_traiter'][] = $formatted;
+                $projectRequests['nouvelles'][] = $formatted;
+            } elseif ($formatted['status'] === 'repondues') {
+                $projectRequests['repondues'][] = $formatted;
+                $projectRequests['en_attente'][] = $formatted;
+            } elseif ($formatted['status'] === 'acceptees') {
+                $projectRequests['acceptees'][] = $formatted;
+                $projectRequests['en_cours'][] = $formatted;
+            } elseif ($formatted['status'] === 'en_cours') {
+                $projectRequests['en_cours_only'][] = $formatted;
+                $projectRequests['en_cours'][] = $formatted;
+            } elseif ($formatted['status'] === 'terminees') {
+                $projectRequests['terminees_only'][] = $formatted;
+                $projectRequests['terminees'][] = $formatted;
+            } elseif ($formatted['status'] === 'annulees') {
+                $projectRequests['annulees'][] = $formatted;
             }
         }
+
+        // Ordonnancement par priorité de traitement :
+        // 1. Demandes à traiter en premier (du plus récent au plus ancien)
+        // 2. Missions en cours & acceptées (activité récente)
+        // 3. Réponses transmises en attente retour client
+        // 4. Terminées
+        // 5. Annulées
+        $projectRequests['all'] = array_merge(
+            $projectRequests['a_traiter'],
+            $projectRequests['en_cours_only'],
+            $projectRequests['acceptees'],
+            $projectRequests['repondues'],
+            $projectRequests['terminees_only'],
+            $projectRequests['annulees']
+        );
 
         // 2. Récupération des compétences réelles du candidat depuis MySQL
         $rawCompetencies = TalentCompetency::where('candidate_id', $candidate->id)
@@ -759,17 +873,23 @@ class CandidateController extends Controller
             ];
         }
 
-        // 5. Devis et missions réelles
+        // 5. Devis et propositions réelles émises par le talent
         $quotes = [];
-        foreach ($rawRequests as $pr) {
+        $quotedRequests = $rawRequests->filter(fn($pr) => !is_null($pr->talent_responded_at) || in_array($pr->status, ['reponse_talent', 'mission_confirmee', 'en_cours', 'terminee']));
+        foreach ($quotedRequests as $pr) {
             $quotes[] = [
                 'id' => $pr->reference,
+                'db_id' => $pr->id,
                 'client_name' => $pr->client_name,
+                'client_company' => $pr->client_company,
                 'project_title' => $pr->title,
                 'amount' => $pr->budget ?? 'Sur devis',
                 'status' => $pr->status,
                 'status_label' => $pr->getStatusLabel(),
+                'status_badge_class' => $pr->getStatusBadgeClass(),
                 'date' => $pr->talent_responded_at ? $pr->talent_responded_at->format('d/m/Y') : ($pr->created_at ? $pr->created_at->format('d/m/Y') : '—'),
+                'tracking_url' => route('candidat.projets.tracking', $pr->id),
+                'can_track' => in_array($pr->status, ['mission_confirmee', 'en_cours', 'terminee']) || $pr->hasSteps(),
             ];
         }
 
@@ -807,28 +927,130 @@ class CandidateController extends Controller
             ];
         }
 
-        // 7. Statistiques réelles consolidées
+        // 7. Statistiques réelles consolidées (aucun chiffre inventé ni taux codé en dur)
         $totalRequests = $rawRequests->count();
-        $respondedCount = $rawRequests->whereNotNull('talent_responded_at')->count();
-        $acceptedCount = $rawRequests->whereIn('status', ['mission_confirmee', 'en_cours', 'terminee'])->count();
+        $toProcessCount = count($projectRequests['a_traiter']);
+        $respondedCount = count($projectRequests['repondues']);
+        $acceptedCount = count($projectRequests['acceptees']);
+        $inProgressCount = count($projectRequests['en_cours_only']);
+        $completedCount = count($projectRequests['terminees_only']);
+        $cancelledCount = count($projectRequests['annulees']);
+        $totalContractedCount = $acceptedCount + $inProgressCount + $completedCount;
 
-        $responseRate = $totalRequests > 0 ? round(($respondedCount / $totalRequests) * 100) . '%' : '100%';
-        $acceptedRate = $totalRequests > 0 ? round(($acceptedCount / $totalRequests) * 100) . '%' : '100%';
+        // Taux de réponse calculé sur les demandes réellement éligibles (exclut les annulations avant action)
+        $totalResponsesSent = $rawRequests->filter(fn($pr) => !is_null($pr->talent_responded_at))->count();
+        $eligibleRequests = $rawRequests->filter(fn($pr) => !($pr->status === 'annulee' && is_null($pr->talent_responded_at)));
+        $eligibleCount = $eligibleRequests->count();
+        $responseRate = $eligibleCount > 0 ? round(($totalResponsesSent / $eligibleCount) * 100) . '%' : ($totalRequests > 0 ? '0%' : '—');
+        $acceptedRate = $totalRequests > 0 ? round(($totalContractedCount / $totalRequests) * 100) . '%' : ($totalRequests > 0 ? '0%' : '—');
 
+        // Demandes ce mois-ci
+        $thisMonthRequestsCount = $rawRequests->filter(fn($pr) => $pr->created_at && $pr->created_at->gte(now()->startOfMonth()))->count();
+
+        // Volume financier réel (uniquement les projets confirmés, en cours ou terminés)
         $totalEarningsNum = 0;
         foreach ($rawRequests->whereIn('status', ['mission_confirmee', 'en_cours', 'terminee']) as $m) {
             $totalEarningsNum += (int) preg_replace('/[^0-9]/', '', $m->budget ?? '0');
         }
         $totalEarningsFormatted = $totalEarningsNum > 0 ? number_format($totalEarningsNum, 0, ',', ' ') . ' FCFA' : '0 FCFA';
 
+        // Avis et note réels (table prestation_reviews)
+        $realReviewsCount = $candidate->reviews()->count();
+        $avgRatingNum = $realReviewsCount > 0 ? round((float) $candidate->reviews()->avg('rating'), 1) : null;
+        $avgRatingFormatted = $avgRatingNum !== null ? number_format($avgRatingNum, 1, '.', '') . ' / 5.0 ★' : '—';
+
+        // Dernière activité pertinente
+        $lastActivityFormatted = 'Aucune activité récente';
+        if ($rawRequests->isNotEmpty()) {
+            $timestamps = [];
+            foreach ($rawRequests as $pr) {
+                if ($pr->created_at) $timestamps[] = $pr->created_at->timestamp;
+                if ($pr->talent_responded_at) $timestamps[] = $pr->talent_responded_at->timestamp;
+                if ($pr->mission_confirmed_at) $timestamps[] = $pr->mission_confirmed_at->timestamp;
+                if ($pr->completed_at) $timestamps[] = $pr->completed_at->timestamp;
+                if ($pr->updated_at) $timestamps[] = $pr->updated_at->timestamp;
+            }
+            if (!empty($timestamps)) {
+                $lastActivityFormatted = \Carbon\Carbon::createFromTimestamp(max($timestamps))->diffForHumans();
+            }
+        }
+
+        // Date de la dernière réponse
+        $lastResponse = $rawRequests->whereNotNull('talent_responded_at')->sortByDesc('talent_responded_at')->first();
+        $lastResponseFormatted = $lastResponse && $lastResponse->talent_responded_at 
+            ? $lastResponse->talent_responded_at->format('d/m/Y à H:i') 
+            : null;
+
+        // Messages contextuels honnêtes (Section 10)
+        $contextualPrompt = null;
+        if ($toProcessCount > 0) {
+            $contextualPrompt = [
+                'type' => 'action_required',
+                'badge' => 'Action requise',
+                'badge_class' => 'bg-[#FFF9EC] text-amber-900 border-[#FFE7A3]',
+                'title' => "Vous avez {$toProcessCount} demande" . ($toProcessCount > 1 ? 's' : '') . " à traiter",
+                'message' => "Des clients attendent votre réponse technique ou votre proposition tarifaire.",
+                'action_label' => 'Consulter les demandes',
+                'filter' => 'a_traiter',
+            ];
+        } elseif ($inProgressCount > 0) {
+            $contextualPrompt = [
+                'type' => 'in_progress',
+                'badge' => 'Missions en cours',
+                'badge_class' => 'bg-emerald-50 text-emerald-800 border-emerald-300',
+                'title' => "Vous avez {$inProgressCount} mission" . ($inProgressCount > 1 ? 's' : '') . " en cours d'exécution",
+                'message' => "Pensez à mettre à jour les étapes et à transmettre vos livrables intermédiaires.",
+                'action_label' => 'Accéder au suivi',
+                'filter' => 'en_cours',
+            ];
+        } elseif ($respondedCount > 0) {
+            $contextualPrompt = [
+                'type' => 'pending_client',
+                'badge' => 'En attente client',
+                'badge_class' => 'bg-purple-50 text-purple-800 border-purple-200',
+                'title' => "Vous avez {$respondedCount} proposition" . ($respondedCount > 1 ? 's' : '') . " transmise" . ($respondedCount > 1 ? 's' : ''),
+                'message' => "Vos devis sont en cours d'examen par les clients. Vous serez notifié dès confirmation.",
+                'action_label' => 'Voir mes réponses',
+                'filter' => 'repondues',
+            ];
+        } else {
+            $contextualPrompt = [
+                'type' => 'ready',
+                'badge' => 'Espace opérationnel',
+                'badge_class' => 'bg-neutral-100 text-neutral-800 border-neutral-300',
+                'title' => $totalRequests === 0 ? "Aucune demande reçue pour le moment" : "Toutes vos demandes sont traitées",
+                'message' => $totalRequests === 0 
+                    ? "Votre profil et vos prestations sont visibles des clients. Vous recevrez des alertes dès qu'un projet vous sera confié."
+                    : "Votre espace est à jour. Aucun projet ne nécessite d'action urgente.",
+                'action_label' => 'Consulter l\'historique',
+                'filter' => 'toutes',
+            ];
+        }
+
         $stats = [
-            'profile_views' => $candidate->profile_views_count ?? 0,
-            'profile_views_growth' => '+18%',
-            'requests_received' => $totalRequests,
+            'total_requests' => $totalRequests,
+            'requests_received' => $totalRequests, // rétrocompatibilité
+            'to_process_count' => $toProcessCount,
+            'responded_count' => $respondedCount,
+            'accepted_count' => $acceptedCount,
+            'in_progress_count' => $inProgressCount,
+            'completed_count' => $completedCount,
+            'cancelled_count' => $cancelledCount,
+            'total_contracted_count' => $totalContractedCount,
+            'total_responses_sent' => $totalResponsesSent,
+            'this_month_count' => $thisMonthRequestsCount,
             'response_rate' => $responseRate,
             'accepted_rate' => $acceptedRate,
-            'avg_rating' => 5.0,
+            'avg_rating' => $avgRatingFormatted,
+            'avg_rating_num' => $avgRatingNum,
+            'reviews_count' => $realReviewsCount,
             'total_earnings' => $totalEarningsFormatted,
+            'total_earnings_num' => $totalEarningsNum,
+            'last_activity' => $lastActivityFormatted,
+            'last_response_formatted' => $lastResponseFormatted,
+            'contextual_prompt' => $contextualPrompt,
+            'profile_views' => $candidate->profile_views_count ?? 0,
+            'profile_views_growth' => null,
         ];
 
         $publishedRealizations = $candidate->platformContents()->where('status', 'publie')->orderBy('created_at', 'desc')->get(['id', 'title', 'file_or_url']);
@@ -884,6 +1106,10 @@ class CandidateController extends Controller
             ->with([
                 'competencies' => function ($q) {
                     $q->whereIn('status', ['valide', 'active', 'declare'])->orderBy('score', 'desc');
+                },
+                'competencies.publishedReviews',
+                'reviews' => function ($q) {
+                    $q->where('status', 'publie');
                 },
                 'platformContents' => function ($q) {
                     // Seuls les contenus validés par la modération sont affichés
@@ -948,6 +1174,31 @@ class CandidateController extends Controller
             $description = $primaryComp?->description ?: ($cand->concrete_services ?: "Prestation professionnelle sur mesure.");
 
             $talentKey = $cand->tracking_code ?: ('talent-' . $cand->id);
+
+            // Calcul rigoureux et authentique des avis clients publiés (ZÉRO FICTIF)
+            $publishedReviews = $primaryComp 
+                ? $primaryComp->publishedReviews 
+                : $cand->reviews->where('status', 'publie');
+
+            $publishedReviewsCount = $publishedReviews ? $publishedReviews->count() : 0;
+            $avgRating = $publishedReviewsCount > 0 
+                ? round((float) $publishedReviews->avg('rating'), 1) 
+                : null;
+
+            $isCertified = $primaryComp ? $primaryComp->isCertified() : false;
+
+            // Le badge "Recommandé" est réservé aux prestations bénéficiant d'avis réels vérifiés
+            if ($publishedReviewsCount >= 3 && $avgRating !== null && $avgRating >= 4.5) {
+                $badge = 'Recommandé';
+                $badgeColor = 'bg-[#FFF9EC] text-[#B8860B] border-[#FFE7A3] dark:bg-[#261D08] dark:text-[#FFB515] dark:border-[#59430D]';
+            } elseif ($isCertified) {
+                $badge = 'Compétence certifiée';
+                $badgeColor = 'bg-emerald-50 text-emerald-800 border-emerald-300 dark:bg-emerald-950/40 dark:text-emerald-300 dark:border-emerald-800';
+            } else {
+                $badge = 'Compétence déclarée';
+                $badgeColor = 'bg-neutral-100 text-neutral-700 border-neutral-300 dark:bg-neutral-800 dark:text-neutral-300 dark:border-neutral-700';
+            }
+
             $services[$talentKey] = [
                 'id' => (string) ($primaryComp?->id ?? $cand->id),
                 'competency_id' => $primaryComp?->id,
@@ -960,12 +1211,14 @@ class CandidateController extends Controller
                 'author_avatar' => $cand->profile_photo ?: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=300&q=80',
                 'city' => $cand->city,
                 'country' => $cand->country,
-                'badge' => ($primaryComp && $primaryComp->isCertified()) ? 'Compétence certifiée' : 'Compétence déclarée',
-                'badge_color' => ($primaryComp && $primaryComp->isCertified()) ? 'bg-emerald-50 text-emerald-800 border-emerald-300' : 'bg-neutral-100 text-neutral-700 border-neutral-300',
-                'is_certified' => $primaryComp ? $primaryComp->isCertified() : false,
+                'badge' => $badge,
+                'badge_color' => $badgeColor,
+                'is_certified' => $isCertified,
                 'level' => $primaryComp?->level ?: 'Intermédiaire',
                 'score' => $cand->score,
-                'rating' => '5.0',
+                'rating' => $avgRating !== null ? number_format($avgRating, 1, '.', '') : null,
+                'reviews_count' => $publishedReviewsCount,
+                'has_reviews' => $publishedReviewsCount > 0,
                 'delivery_time' => $deliveryTime,
                 'price' => $price,
                 'price_num' => $priceNum,
@@ -986,7 +1239,7 @@ class CandidateController extends Controller
     /**
      * Espace Candidat / Talent : Tableau de bord & Back-office
      */
-    public function dashboard()
+    public function dashboard(Request $request)
     {
         $user = Auth::user();
         if (!$user) {
@@ -1009,6 +1262,22 @@ class CandidateController extends Controller
             return redirect()->route('candidature.create');
         }
 
+        $validTabs = [
+            'dashboard',
+            'demandes',
+            'competences',
+            'profil',
+            'realisations',
+            'notifications',
+            'parametres',
+            'devis_missions',
+            'avis',
+            'stats',
+        ];
+
+        $requestedTab = $request->query('tab');
+        $activeTab = ($requestedTab && in_array($requestedTab, $validTabs, true)) ? $requestedTab : 'dashboard';
+
         $verifications = $candidate->verifications;
         $categoriesData = self::getCategoriesData();
         $officialCategoriesWithSkills = TalentCompetency::getOfficialCategoriesWithSkills();
@@ -1020,6 +1289,8 @@ class CandidateController extends Controller
             'verifications' => $verifications,
             'categoriesData' => $categoriesData,
             'officialCategoriesWithSkills' => $officialCategoriesWithSkills,
+            'validTabs' => $validTabs,
+            'activeTab' => $activeTab,
         ], $backofficeData));
     }
 
@@ -1052,7 +1323,7 @@ class CandidateController extends Controller
         $candidate->is_available_now = $request->boolean('is_available_now');
         $candidate->save();
 
-        return back()->with('success', 'Votre profil public a été mis à jour avec succès.');
+        return redirect()->route('candidat.dashboard', ['tab' => 'profil'])->with('success', 'Votre profil public a été mis à jour avec succès.');
     }
 
     /**
@@ -1224,7 +1495,7 @@ class CandidateController extends Controller
             ? "La compétence « {$competency->name} » a été enregistrée avec succès et est active sur votre profil."
             : "La compétence « {$competency->name} » a été enregistrée en base de données et transmise au comité technique pour vérification.";
 
-        return back()->with('success', $successMsg);
+        return redirect()->route('candidat.dashboard', ['tab' => 'competences'])->with('success', $successMsg);
     }
 
     /**
@@ -1362,7 +1633,7 @@ class CandidateController extends Controller
             'ip_address' => $request->ip(),
         ]);
 
-        return back()->with('success', "La compétence « {$competency->name} » a été mise à jour avec succès.");
+        return redirect()->route('candidat.dashboard', ['tab' => 'competences'])->with('success', "La compétence « {$competency->name} » a été mise à jour avec succès.");
     }
 
     /**
@@ -1401,7 +1672,7 @@ class CandidateController extends Controller
             ]);
         });
 
-        return back()->with('success', "La compétence « {$competencyName} » a été supprimée avec succès.");
+        return redirect()->route('candidat.dashboard', ['tab' => 'competences'])->with('success', "La compétence « {$competencyName} » a été supprimée avec succès.");
     }
 
     /**
@@ -1460,7 +1731,55 @@ class CandidateController extends Controller
             'ip_address' => $request->ip(),
         ]);
 
-        return back()->with('success', "Votre réalisation « {$content->title} » a été enregistrée en base de données et transmise à la modération.");
+        return redirect()->route('candidat.dashboard', ['tab' => 'realisations'])->with('success', "Votre réalisation « {$content->title} » a été enregistrée en base de données et transmise à la modération.");
+    }
+
+    /**
+     * Consultation sécurisée d'une demande de projet par le talent (Contrôle strict des autorisations)
+     */
+    public function showRequest(Request $request, int $id)
+    {
+        $user = Auth::user();
+        if (!$user) return redirect()->route('candidat.login');
+        $candidate = $user->candidate ?? Candidate::where('user_id', $user->id)->firstOrFail();
+
+        $project = ProjectRequest::with(['competency', 'steps'])
+            ->where('id', $id)
+            ->where('candidate_id', $candidate->id)
+            ->first();
+
+        if (!$project) {
+            abort(403, "Accès refusé. Cette demande de projet ne vous est pas assignée ou n'existe pas.");
+        }
+
+        if ($request->wantsJson() || $request->ajax()) {
+            return response()->json([
+                'id' => $project->id,
+                'reference' => $project->reference,
+                'client_name' => $project->client_name,
+                'client_email' => $project->client_email,
+                'client_phone' => $project->client_phone,
+                'client_company' => $project->client_company,
+                'title' => $project->title,
+                'category' => $project->category,
+                'budget' => $project->budget,
+                'deadline' => $project->deadline,
+                'status' => $project->status,
+                'status_label' => $project->getStatusLabel(),
+                'need_description' => $project->need_description,
+                'expected_deliverable' => $project->expected_deliverable,
+                'talent_response_notes' => $project->talent_response_notes,
+                'created_at' => $project->created_at?->toIso8601String(),
+                'talent_responded_at' => $project->talent_responded_at?->toIso8601String(),
+                'mission_confirmed_at' => $project->mission_confirmed_at?->toIso8601String(),
+                'completed_at' => $project->completed_at?->toIso8601String(),
+            ]);
+        }
+
+        return redirect()->route('candidat.dashboard', [
+            'tab' => 'demandes',
+            'demande_id' => $project->id,
+        ]);
     }
 
     /**
@@ -1484,13 +1803,33 @@ class CandidateController extends Controller
             abort(403, "Accès refusé. Cette demande de projet ne vous est pas assignée ou n'existe pas.");
         }
 
+        // Contrôle des transitions autorisées : une demande terminée ou annulée ne peut plus être modifiée
+        if (in_array($project->status, ['terminee', 'annulee'])) {
+            return back()->with('error', "Cette demande est déjà " . ($project->status === 'terminee' ? 'clôturée/terminée' : 'annulée/déclinée') . ". Aucune nouvelle réponse n'est autorisée.");
+        }
+
+        // Protection contre la double soumission (double-clic ou rechargement rapide dans les 5 secondes)
+        if (in_array($project->status, ['mission_confirmee', 'reponse_talent']) && $project->talent_responded_at && $project->talent_responded_at->diffInSeconds(now()) < 5) {
+            $isConfirmed = ($project->status === 'mission_confirmee');
+            $filter = $isConfirmed ? 'acceptees' : 'repondues';
+            $msg = $isConfirmed 
+                ? "Votre accord pour le dossier {$project->reference} a déjà été enregistré."
+                : "Votre proposition pour le dossier {$project->reference} a déjà été enregistrée.";
+            return redirect()->route('candidat.dashboard', ['tab' => 'demandes', 'filter' => $filter])->with('success', $msg);
+        }
+
+        // Si le projet est déjà confirmé ou en cours, renvoyer vers son suivi interactif
+        if (in_array($project->status, ['mission_confirmee', 'en_cours'])) {
+            return back()->with('error', "Cette mission a déjà été confirmée. Vous pouvez suivre et piloter son exécution directement dans son espace dédié.");
+        }
+
         $request->validate([
-            'action_type' => 'required|in:devis,accepter,decliner',
+            'action_type' => 'nullable|string|in:accepter,devis,decliner',
             'quote_amount' => 'nullable|string|max:100',
             'message' => 'nullable|string|max:2000',
         ]);
 
-        $action = $request->input('action_type', 'devis');
+        $action = $request->input('action_type', 'accepter');
         $quoteAmount = trim($request->input('quote_amount', ''));
         $message = trim($request->input('message', ''));
 
@@ -1500,6 +1839,8 @@ class CandidateController extends Controller
         }
 
         $oldStatus = $project->status;
+        $warningFeedback = null;
+        $feedback = null;
 
         if ($action === 'decliner') {
             $project->status = 'annulee';
@@ -1524,22 +1865,22 @@ class CandidateController extends Controller
                     Log::error("Erreur envoi email refus client projet {$project->reference}: " . $e->getMessage());
                     $project->email_error_log = ($project->email_error_log ? $project->email_error_log . "\n" : '') .
                         "[" . now()->format('d/m/Y H:i') . "] Refusal mail error: " . $e->getMessage();
+                    $warningFeedback = "La demande {$project->reference} a été déclinée en base de données, mais l'e-mail de notification n'a pas pu être délivré au client.";
                 }
             }
         } elseif ($action === 'accepter') {
-            if (in_array($project->status, ['recue', 'contacte', 'en_attente'])) {
-                $project->status = 'reponse_talent';
-            }
+            $project->status = 'mission_confirmee';
             $project->talent_responded_at = now();
+            $project->mission_confirmed_at = now();
 
-            $note = "Demande de projet acceptée par le talent.";
+            $note = "Demande acceptée par le talent. Mission confirmée.";
             if ($message) {
                 $note .= " Message au client : {$message}";
             }
             $project->talent_response_notes = ($project->talent_response_notes ? $project->talent_response_notes . "\n" : '') .
                 "[" . now()->format('d/m/Y H:i') . "] " . $note;
 
-            $feedback = "Vous avez accepté la demande de projet {$project->reference}. Elle passe au statut validé / réponse talent.";
+            $feedback = "Félicitations ! Vous avez accepté la demande {$project->reference}. La mission est confirmée et disponible dans votre suivi de projet.";
 
             // Envoi de l'e-mail d'acceptation au client avec coordonnées réelles vérifiées
             if (!empty($project->client_email) && !$project->client_decision_notified_at) {
@@ -1559,10 +1900,11 @@ class CandidateController extends Controller
                     Log::error("Erreur envoi email acceptation client projet {$project->reference}: " . $e->getMessage());
                     $project->email_error_log = ($project->email_error_log ? $project->email_error_log . "\n" : '') .
                         "[" . now()->format('d/m/Y H:i') . "] Acceptance mail error: " . $e->getMessage();
+                    $warningFeedback = "Votre accord pour le dossier {$project->reference} a été enregistré et la mission est confirmée, mais l'e-mail de notification n'a pas pu être délivré immédiatement au client.";
                 }
             }
         } else {
-            // Rétrocompatibilité devis
+            // Action : 'devis' (Proposition commerciale & devis)
             if (in_array($project->status, ['recue', 'contacte', 'en_attente'])) {
                 $project->status = 'reponse_talent';
             }
@@ -1574,14 +1916,50 @@ class CandidateController extends Controller
                 $project->budget = $quoteAmount;
             }
             if ($message) {
-                $noteParts[] = "Message : {$message}";
+                $noteParts[] = "Conditions & Notes : {$message}";
             }
             $noteText = implode(' | ', $noteParts);
 
             $project->talent_response_notes = ($project->talent_response_notes ? $project->talent_response_notes . "\n" : '') .
                 "[" . now()->format('d/m/Y H:i') . "] " . $noteText;
 
-            $feedback = "Votre réponse pour le dossier {$project->reference} a été enregistrée avec succès en base de données.";
+            // Envoi de l'e-mail de proposition commerciale au client
+            $emailSent = false;
+            if (!empty($project->client_email)) {
+                try {
+                    $channels = [];
+                    if (!empty($candidate->phone)) {
+                        $channels['phone'] = $candidate->phone;
+                    }
+                    if (!empty($candidate->email)) {
+                        $channels['email'] = $candidate->email;
+                    }
+
+                    Mail::to($project->client_email)->send(
+                        new ProjectRequestProposalClientMail(
+                            $project,
+                            $candidate,
+                            $quoteAmount ?: $project->budget,
+                            $message,
+                            $channels
+                        )
+                    );
+                    $project->client_decision_notified_at = now();
+                    $emailSent = true;
+                } catch (\Throwable $e) {
+                    Log::error("Erreur envoi email proposition client projet {$project->reference}: " . $e->getMessage());
+                    $project->email_error_log = ($project->email_error_log ? $project->email_error_log . "\n" : '') .
+                        "[" . now()->format('d/m/Y H:i') . "] Proposal mail error: " . $e->getMessage();
+                }
+            }
+
+            if ($emailSent) {
+                $feedback = "Votre proposition commerciale pour le dossier {$project->reference} a été enregistrée avec succès et transmise par e-mail au client.";
+            } elseif (!empty($project->client_email)) {
+                $warningFeedback = "Votre proposition commerciale pour le dossier {$project->reference} a été enregistrée en base de données, mais la notification par e-mail n'a pas pu être délivrée au client. Vous pouvez contacter le client directement.";
+            } else {
+                $feedback = "Votre proposition commerciale pour le dossier {$project->reference} a été enregistrée avec succès en base de données.";
+            }
         }
 
         $project->save();
@@ -1598,11 +1976,17 @@ class CandidateController extends Controller
             'admin_name' => $candidate->full_name,
             'action' => 'Réponse à un projet client',
             'section' => 'projets',
-            'details' => "Le talent {$candidate->full_name} a répondu à la demande {$project->reference} (Statut : [{$oldStatus}] -> [{$project->status}]).",
+            'details' => "Le talent {$candidate->full_name} a répondu à la demande {$project->reference} (Action : [{$action}], Statut : [{$oldStatus}] -> [{$project->status}]).",
             'ip_address' => $request->ip(),
         ]);
 
-        return back()->with('success', $feedback);
+        $redirectFilter = ($action === 'accepter') ? 'acceptees' : (($action === 'decliner') ? 'annulees' : 'repondues');
+
+        if ($warningFeedback) {
+            return redirect()->route('candidat.dashboard', ['tab' => 'demandes', 'filter' => $redirectFilter])->with('warning', $warningFeedback);
+        }
+
+        return redirect()->route('candidat.dashboard', ['tab' => 'demandes', 'filter' => $redirectFilter])->with('success', $feedback);
     }
 
     /**
@@ -1621,7 +2005,7 @@ class CandidateController extends Controller
             $user->save();
         }
 
-        return back()->with('success', 'Vos paramètres ont été actualisés avec succès.');
+        return redirect()->route('candidat.dashboard', ['tab' => 'parametres'])->with('success', 'Vos paramètres ont été actualisés avec succès.');
     }
 
     /**
@@ -1788,7 +2172,7 @@ class CandidateController extends Controller
      */
     public function showProject(Request $request, $id = 'site-vitrine')
     {
-        if ($id && !in_array($id, ['site-vitrine', 'logo-identite', 'video-courte', 'application-mobile'])) {
+        if ($id && !in_array($id, ['site-vitrine', 'logo-identite', 'video-courte', 'application-mobile', 'copywriting-social', 'uiux-design-system'])) {
             $cand = Candidate::where(function ($q) use ($id) {
                 if (is_numeric($id)) {
                     $q->where('id', (int) $id)->orWhere('tracking_code', $id);
@@ -1814,6 +2198,23 @@ class CandidateController extends Controller
             }
 
             abort(404, "Talent introuvable.");
+        }
+
+        // Résolution par slug pour les prestations clés de la page d'accueil
+        $slugCompetencyMap = [
+            'copywriting-social' => 14,
+            'logo-identite' => 8,
+            'video-courte' => 11,
+            'uiux-design-system' => 9,
+            'application-mobile' => 3,
+            'site-vitrine' => 1,
+        ];
+
+        if (isset($slugCompetencyMap[$id])) {
+            $matchedComp = TalentCompetency::with('candidate')->find($slugCompetencyMap[$id]);
+            if ($matchedComp && $matchedComp->candidate && $matchedComp->candidate->status === 'valide' && $matchedComp->candidate->visibility_status === 'publie') {
+                return $this->renderPrestationView($matchedComp->candidate, $matchedComp);
+            }
         }
 
         // Cas de fallback pour un slug ou affichage générique
@@ -2430,7 +2831,7 @@ class CandidateController extends Controller
     {
         [$candidate, $project] = $this->getAuthorizedCandidateProject($id);
 
-        $steps = $project->steps()->orderBy('position')->get();
+        $steps = $project->steps()->orderByDesc('created_at')->orderByDesc('id')->get();
         $progress = $project->calculateProgress();
         $pendingClientActions = $project->getPendingClientActionsCount();
 

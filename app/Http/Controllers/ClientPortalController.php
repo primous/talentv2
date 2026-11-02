@@ -166,7 +166,7 @@ class ClientPortalController extends Controller
         // Règle de confidentialité sur les coordonnées du talent
         $canViewContacts = in_array($demande->status, ['reponse_talent', 'mission_confirmee', 'en_cours', 'terminee']);
 
-        $steps = $demande->steps()->orderBy('position')->get();
+        $steps = $demande->steps()->orderByDesc('created_at')->orderByDesc('id')->get();
         $progress = $demande->calculateProgress();
         $hasSteps = $demande->hasSteps();
         $pendingClientActions = $demande->getPendingClientActionsCount();

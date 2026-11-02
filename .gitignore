@@ -22,4 +22,5 @@
 Homestead.json
 Homestead.yaml
 /scratch
+.vercel
 Thumbs.db

@@ -38,7 +38,7 @@ class ProjectRequest extends Model
 
     public function steps(): \Illuminate\Database\Eloquent\Relations\HasMany
     {
-        return $this->hasMany(ProjectStep::class, 'project_request_id')->orderBy('position');
+        return $this->hasMany(ProjectStep::class, 'project_request_id')->orderByDesc('created_at')->orderByDesc('id');
     }
 
     /**

@@ -910,5 +910,51 @@ class InteractiveMissionTrackingAndErrorPagesTest extends TestCase
 
         Mail::assertSent(ProjectStepClientActionNotificationMail::class, 1);
     }
+
+    /**
+     * 20. L'ordre des étapes affiche ce qui est récent en haut (antéchronologique).
+     */
+    public function test_steps_are_ordered_most_recent_first_in_talent_and_client_itineraries(): void
+    {
+        [$user, $candidate] = $this->createTalentUser();
+        $project = $this->createProject($candidate, 'client.itinerary@test.ci');
+
+        // Création de 3 étapes avec des timestamps différents
+        $s1 = $project->steps()->create([
+            'title' => 'Ancienne étape de cadrage',
+            'step_type' => 'info',
+            'position' => 1,
+            'created_at' => now()->subDays(3),
+        ]);
+
+        $s2 = $project->steps()->create([
+            'title' => 'Étape intermédiaire de maquettage',
+            'step_type' => 'talent_task',
+            'position' => 2,
+            'created_at' => now()->subDays(1),
+        ]);
+
+        $s3 = $project->steps()->create([
+            'title' => 'Étape très récente de livraison',
+            'step_type' => 'deliverable',
+            'position' => 3,
+            'created_at' => now(),
+        ]);
+
+        // A. Côté Talent : Itinéraire d'exécution de la mission
+        $talentView = $this->actingAs($user)->get(route('candidat.projets.tracking', $project->id));
+        $talentView->assertOk();
+        $talentSteps = $talentView->viewData('steps');
+        $this->assertEquals($s3->id, $talentSteps->first()->id, 'L’étape la plus récente doit être en tête de liste.');
+        $this->assertEquals($s1->id, $talentSteps->last()->id, 'L’étape la plus ancienne doit être en fin de liste.');
+
+        // B. Côté Client : Itinéraire & Avancement du Projet
+        $clientView = $this->withSession(['client_portal_email' => 'client.itinerary@test.ci'])
+            ->get(route('client.demandes.show', ['reference' => $project->reference]));
+        $clientView->assertOk();
+        $clientSteps = $clientView->viewData('steps');
+        $this->assertEquals($s3->id, $clientSteps->first()->id, 'L’étape la plus récente doit être en tête de liste côté client.');
+        $this->assertEquals($s1->id, $clientSteps->last()->id, 'L’étape la plus ancienne doit être en fin de liste côté client.');
+    }
 }
 

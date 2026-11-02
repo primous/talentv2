@@ -14,8 +14,8 @@ function getTalentServices() {
             'author_avatar' => 'https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?auto=format&fit=crop&w=200&q=80',
             'badge' => 'Recommandé',
             'badge_color' => 'bg-[#FFF9EC] text-[#B8860B] border-[#FFE7A3]',
-            'rating' => '5.0',
-            'reviews_count' => 46,
+            'rating' => null,
+            'reviews_count' => 0,
             'sales_count' => 58,
             'delivery_time' => '10 à 15 jours',
             'delivery_days' => 12,
@@ -526,8 +526,8 @@ function getTalentServices() {
             'author_avatar' => 'https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?auto=format&fit=crop&w=200&q=80',
             'badge' => 'Recommandé',
             'badge_color' => 'bg-[#FFF9EC] text-[#B8860B] border-[#FFE7A3]',
-            'rating' => '4.9',
-            'reviews_count' => 31,
+            'rating' => null,
+            'reviews_count' => 0,
             'sales_count' => 39,
             'delivery_time' => '7 à 12 jours',
             'delivery_days' => 9,
@@ -633,8 +633,8 @@ function getTalentServices() {
             'author_avatar' => 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=200&q=80',
             'badge' => 'Haute conversion',
             'badge_color' => 'bg-[#FFF9EC] text-[#B8860B] border-[#FFE7A3]',
-            'rating' => '5.0',
-            'reviews_count' => 22,
+            'rating' => null,
+            'reviews_count' => 0,
             'sales_count' => 53,
             'delivery_time' => '5 à 8 jours',
             'delivery_days' => 6,
@@ -750,6 +750,26 @@ Route::get('/', function () {
     return view('landing', compact('services', 'defaultCandidate'));
 })->name('home');
 
+Route::get('/lang/{locale}', function (string $locale, \Illuminate\Http\Request $request) {
+    $locale = strtolower(trim($locale));
+    if (!in_array($locale, ['fr', 'en'])) {
+        $locale = 'fr';
+    }
+    session(['locale' => $locale]);
+    \Illuminate\Support\Facades\App::setLocale($locale);
+    cookie()->queue(cookie('talent_locale', $locale, 60 * 24 * 365, '/', null, false, false));
+
+    if ($request->wantsJson() || $request->ajax()) {
+        return response()->json([
+            'status' => 'success',
+            'locale' => $locale,
+            'message' => $locale === 'en' ? 'Language switched to English' : 'Langue basculée en Français'
+        ]);
+    }
+
+    return redirect()->back(fallback: route('home'));
+})->name('lang.switch');
+
 Route::get('/talents', [\App\Http\Controllers\CandidateController::class, 'catalog'])->name('talents');
 
 Route::get('/prestation/{id}', [\App\Http\Controllers\CandidateController::class, 'showPrestation'])->name('prestation.show');
@@ -794,6 +814,7 @@ Route::post('/candidat/competence/{id}/update', [\App\Http\Controllers\Candidate
 Route::delete('/candidat/competence/{id}', [\App\Http\Controllers\CandidateController::class, 'destroyCompetency'])->name('candidat.competence.destroy');
 Route::post('/candidat/realisation/store', [\App\Http\Controllers\CandidateController::class, 'storeRealization'])->name('candidat.realisation.store');
 Route::post('/candidat/demandes/{id}/repondre', [\App\Http\Controllers\CandidateController::class, 'respondToRequest'])->name('candidat.demandes.respond');
+Route::get('/candidat/demandes/{id}', [\App\Http\Controllers\CandidateController::class, 'showRequest'])->name('candidat.demandes.show');
 Route::post('/candidat/parametres/update', [\App\Http\Controllers\CandidateController::class, 'updateSettings'])->name('candidat.parametres.update');
 
 // Suivi interactif d'une mission par le talent

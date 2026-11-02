@@ -6,6 +6,11 @@
     <title>Suivi de vos demandes de projet | Talent Club</title>
     <meta name="description" content="Accédez à l'historique et au suivi en temps réel de vos demandes de projets sur Talent Club sans créer de compte ni mot de passe.">
 
+    <!-- Favicon -->
+    <link rel="icon" type="image/x-icon" href="{{ asset('favicon.ico') }}">
+    <link rel="icon" type="image/png" sizes="32x32" href="{{ asset('images/favicon.png') }}">
+    <link rel="apple-touch-icon" sizes="180x180" href="{{ asset('images/apple-touch-icon.png') }}">
+
     <!-- Google Fonts: Inter & Montserrat -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -57,14 +62,9 @@
     <!-- Header épuré -->
     <header class="bg-white border-b border-[#E8E5DC] py-4 px-6 sm:px-10">
         <div class="max-w-6xl mx-auto flex items-center justify-between">
-            <a href="{{ url('/') }}" class="flex items-center gap-2" aria-label="Talent Club Accueil">
-                <div class="flex flex-col leading-none">
-                    <div class="relative flex items-center">
-                        <span class="tc-logo-text text-[26px] text-black">talent</span>
-                        <span class="text-[#FFB515] text-[20px] ml-0.5">★</span>
-                        <span class="tc-logo-text text-[26px] text-black ml-0.5">club</span>
-                    </div>
-                </div>
+            <a href="{{ url('/') }}" class="flex items-center gap-2 hover:opacity-90 transition-opacity" aria-label="Talent Club Accueil">
+                <img src="{{ asset('images/logo.png') }}" alt="Talent Club" class="h-9 w-auto object-contain">
+                <span class="sr-only">talent club</span>
             </a>
             <div class="flex items-center gap-4 text-xs font-bold">
                 <a href="{{ route('talents') }}" class="text-neutral-600 hover:text-black transition-colors">
