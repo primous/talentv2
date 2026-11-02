@@ -1,6 +1,6 @@
 <?php
 
-// Initialisation des dossiers temporaires accessibles en écriture sur Vercel Serverless
+// Création des dossiers temporaires indispensables dans /tmp
 $storageDirs = [
     '/tmp/storage',
     '/tmp/storage/app',
@@ -21,10 +21,20 @@ foreach ($storageDirs as $dir) {
     }
 }
 
-// Forcer le chemin de stockage Laravel vers /tmp
 putenv('LARAVEL_STORAGE_PATH=/tmp/storage');
 $_ENV['LARAVEL_STORAGE_PATH'] = '/tmp/storage';
 $_SERVER['LARAVEL_STORAGE_PATH'] = '/tmp/storage';
 
-// Point d'entrée principal Laravel
+putenv('VIEW_COMPILED_PATH=/tmp/storage/framework/views');
+$_ENV['VIEW_COMPILED_PATH'] = '/tmp/storage/framework/views';
+$_SERVER['VIEW_COMPILED_PATH'] = '/tmp/storage/framework/views';
+
+putenv('APP_SERVICES_CACHE=/tmp/services.php');
+$_ENV['APP_SERVICES_CACHE'] = '/tmp/services.php';
+$_SERVER['APP_SERVICES_CACHE'] = '/tmp/services.php';
+
+putenv('APP_PACKAGES_CACHE=/tmp/packages.php');
+$_ENV['APP_PACKAGES_CACHE'] = '/tmp/packages.php';
+$_SERVER['APP_PACKAGES_CACHE'] = '/tmp/packages.php';
+
 require __DIR__ . '/../public/index.php';

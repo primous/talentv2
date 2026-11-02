@@ -35,7 +35,8 @@
   ],
   "env": {
     "APP_ENV": "production",
-    "APP_DEBUG": "false",
+    "APP_DEBUG": "true",
+    "APP_KEY": "base64:JaDyszDe67lK8dXBLYAZ4ntrauwHgxrWE71piRHK2Jw=",
     "APP_CONFIG_CACHE": "/tmp/config.php",
     "APP_EVENTS_CACHE": "/tmp/events.php",
     "APP_PACKAGES_CACHE": "/tmp/packages.php",
@@ -43,7 +44,9 @@
     "APP_SERVICES_CACHE": "/tmp/services.php",
     "VIEW_COMPILED_PATH": "/tmp/storage/framework/views",
     "CACHE_STORE": "array",
+    "CACHE_DRIVER": "array",
     "SESSION_DRIVER": "cookie",
+    "LOG_CHANNEL": "stderr",
     "LARAVEL_STORAGE_PATH": "/tmp/storage"
   }
 }
