@@ -66,6 +66,7 @@
         tab: '{{ $activeTab ?? 'dashboard' }}', 
         mobileMenuOpen: false, 
         searchQuery: '',
+        showMobileSearch: false,
         demandeFilter: '{{ request()->query('filter', 'toutes') }}',
         demandeSearch: '',
         selectedRequest: null,
@@ -180,6 +181,10 @@
         <div class="fixed top-4 right-4 z-50 max-w-md bg-white border-l-4 border-amber-500 shadow-xl rounded-xl p-4 flex items-start gap-3 transition-all">
             <div class="w-7 h-7 rounded-full bg-amber-100 text-amber-700 flex items-center justify-center font-bold text-sm shrink-0">⚠️</div>
             <div class="text-xs text-neutral-800">
+                <div class="font-bold text-neutral-900">Avertissement</div>
+                <div>{{ session('warning') }}</div>
+            </div>
+            <button onclick="this.parentElement.remove()" class="text-neutral-400 hover:text-black text-sm ml-auto font-bold">&times;</button>
         </div>
     @endif
 
@@ -401,61 +406,93 @@
         <!-- ============================================================== -->
         <div class="lg:ml-64 flex-1 flex flex-col min-h-screen">
 
-            <!-- BARRE SUPÉRIEURE DE NAVIGATION ET RECHERCHE (STICKY) -->
-            <header class="sticky top-0 z-30 bg-white/95 backdrop-blur-sm border-b border-neutral-200/80 px-4 sm:px-6 py-3 flex items-center justify-between gap-4">
-                <div class="flex items-center gap-3">
-                    <button @click="mobileMenuOpen = true" class="lg:hidden p-2 rounded-xl bg-neutral-100 text-neutral-700 hover:bg-neutral-200" title="Menu">
-                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"/></svg>
-                    </button>
+            <!-- BARRE SUPÉRIEURE DE NAVIGATION ET RECHERCHE (STICKY & 100% RESPONSIVE) -->
+            <header class="sticky top-0 z-30 bg-white/95 backdrop-blur-sm border-b border-neutral-200/80 px-3.5 sm:px-6 py-2.5 sm:py-3">
+                <div class="flex items-center justify-between gap-2 sm:gap-4">
+                    <!-- GAUCHE : BOUTON MENU BURGER + SALUTATION NOM & BADGE -->
+                    <div class="flex items-center gap-2 sm:gap-3 min-w-0">
+                        <button 
+                            @click="mobileMenuOpen = true" 
+                            class="lg:hidden p-2 rounded-xl bg-neutral-100 text-neutral-700 hover:bg-neutral-200 shrink-0" 
+                            title="Menu principal"
+                        >
+                            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"/></svg>
+                        </button>
 
-                    <div>
-                        <div class="flex items-center gap-2">
-                            <h1 class="text-base sm:text-lg font-bold text-[#111]">
-                                Bonjour {{ explode(' ', $candidate->full_name)[0] }} 👋
-                            </h1>
-                            <span class="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-bold {{ $candidate->getStatusBadgeClass() }}">
-                                {{ $candidate->getStatusLabel() }}
-                            </span>
+                        <div class="min-w-0">
+                            <div class="flex items-center gap-1.5 sm:gap-2">
+                                <h1 class="text-sm sm:text-lg font-extrabold text-[#111] whitespace-nowrap truncate">
+                                    Bonjour {{ explode(' ', $candidate->full_name)[0] }} 👋
+                                </h1>
+                                <span class="hidden xs:inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-bold shrink-0 {{ $candidate->getStatusBadgeClass() }}">
+                                    {{ $candidate->getStatusLabel() }}
+                                </span>
+                            </div>
+                            <p class="text-[11px] text-neutral-400 hidden sm:block">Voici le récapitulatif de votre activité et vos opportunités de la semaine.</p>
                         </div>
-                        <p class="text-[11px] text-neutral-400 hidden sm:block">Voici le récapitulatif de votre activité et vos opportunités de la semaine.</p>
+                    </div>
+
+                    <!-- DROITE : RECHERCHE + NOTIFICATIONS + DÉCONNEXION -->
+                    <div class="flex items-center gap-1.5 sm:gap-2.5 shrink-0">
+                        <!-- Recherche Desktop -->
+                        <div class="relative hidden md:block w-48 lg:w-64">
+                            <input 
+                                type="text" 
+                                x-model="searchQuery" 
+                                placeholder="Rechercher..." 
+                                class="w-full h-8 pl-8 pr-3 bg-[#F7F7F8] border border-neutral-200/80 rounded-lg text-xs text-[#111] placeholder-neutral-400 focus:outline-none focus:border-[#111] focus:bg-white transition-all"
+                            >
+                            <svg class="w-3.5 h-3.5 text-neutral-400 absolute left-2.5 top-2.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/></svg>
+                        </div>
+
+                        <!-- Bouton Loupe Mobile (affiche/masque le champ de recherche sous le header) -->
+                        <button 
+                            type="button" 
+                            @click="showMobileSearch = !showMobileSearch" 
+                            class="md:hidden w-8 h-8 rounded-lg bg-[#F7F7F8] hover:bg-neutral-100 border border-neutral-200/80 flex items-center justify-center text-neutral-600 transition-all shrink-0 cursor-pointer"
+                            title="Rechercher"
+                        >
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/></svg>
+                        </button>
+
+                        <!-- BOUTON NOTIFICATION RAPIDE -->
+                        <a 
+                            href="{{ route('candidat.dashboard', ['tab' => 'notifications']) }}" 
+                            class="relative w-8 h-8 rounded-lg bg-[#F7F7F8] hover:bg-neutral-100 border border-neutral-200/80 flex items-center justify-center text-neutral-600 transition-all shrink-0 cursor-pointer"
+                            title="Voir les notifications"
+                        >
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9"/></svg>
+                            <span class="absolute top-1.5 right-1.5 w-2 h-2 rounded-full bg-rose-500 ring-2 ring-white"></span>
+                        </a>
+
+                        <!-- BOUTON DÉCONNEXION -->
+                        <form action="{{ route('candidat.logout') }}" method="POST" class="inline-flex">
+                            @csrf
+                            <button 
+                                type="submit" 
+                                class="w-8 h-8 rounded-lg bg-[#F7F7F8] hover:bg-rose-50 border border-neutral-200/80 hover:border-rose-200 flex items-center justify-center text-rose-500 hover:text-rose-600 transition-all shrink-0 cursor-pointer"
+                                title="Déconnexion"
+                            >
+                                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"/>
+                                </svg>
+                            </button>
+                        </form>
                     </div>
                 </div>
 
-                <!-- RECHERCHE & CONTRÔLES RAPIDES -->
-                <div class="flex items-center gap-2.5">
-                    <div class="relative w-40 sm:w-56 md:w-64">
+                <!-- BARRE DE RECHERCHE MOBILE DÉPLOYABLE -->
+                <div x-show="showMobileSearch" x-cloak class="md:hidden pt-2.5">
+                    <div class="relative w-full">
                         <input 
                             type="text" 
                             x-model="searchQuery" 
-                            placeholder="Rechercher..." 
-                            class="w-full h-8 pl-8 pr-3 bg-[#F7F7F8] border border-neutral-200/80 rounded-lg text-xs text-[#111] placeholder-neutral-400 focus:outline-none focus:border-[#111] focus:bg-white transition-all"
+                            placeholder="Rechercher dans votre espace..." 
+                            class="w-full h-9 pl-9 pr-8 bg-[#F7F7F8] border border-neutral-300 rounded-xl text-xs text-[#111] placeholder-neutral-400 focus:outline-none focus:border-[#111] focus:bg-white"
                         >
-                        <svg class="w-3.5 h-3.5 text-neutral-400 absolute left-2.5 top-2.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/></svg>
+                        <svg class="w-4 h-4 text-neutral-400 absolute left-3 top-2.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/></svg>
+                        <button type="button" @click="showMobileSearch = false; searchQuery = ''" class="absolute right-2.5 top-2 text-neutral-400 hover:text-black text-xs font-bold p-1">✕</button>
                     </div>
-
-                    <!-- BOUTON NOTIFICATION RAPIDE -->
-                    <a 
-                        href="{{ route('candidat.dashboard', ['tab' => 'notifications']) }}" 
-                        class="relative w-8 h-8 rounded-lg bg-[#F7F7F8] hover:bg-neutral-100 border border-neutral-200/80 flex items-center justify-center text-neutral-600 transition-all shrink-0 cursor-pointer"
-                        title="Voir les notifications"
-                    >
-                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9"/></svg>
-                        <span class="absolute top-1.5 right-1.5 w-2 h-2 rounded-full bg-rose-500 ring-2 ring-white"></span>
-                    </a>
-
-                    <!-- BOUTON DÉCONNEXION (icône logout rouge discret à côté de la cloche) -->
-                    <form action="{{ route('candidat.logout') }}" method="POST" class="inline-flex">
-                        @csrf
-                        <button 
-                            type="submit" 
-                            class="w-8 h-8 rounded-lg bg-[#F7F7F8] hover:bg-rose-50 border border-neutral-200/80 hover:border-rose-200 flex items-center justify-center text-rose-500 hover:text-rose-600 transition-all shrink-0 cursor-pointer"
-                            title="Déconnexion"
-                        >
-                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"/>
-                            </svg>
-                        </button>
-                    </form>
                 </div>
             </header>
 
@@ -1784,7 +1821,7 @@
     >
         <div 
             @click.away="showBriefModal = false"
-            class="bg-white rounded-3xl max-w-xl w-full p-6 space-y-5 border border-neutral-200 shadow-2xl overflow-y-auto max-h-[90vh]"
+            class="bg-white rounded-3xl max-w-xl w-full p-4 sm:p-6 space-y-4 border border-neutral-200 shadow-2xl overflow-y-auto max-h-[90vh]"
         >
             <template x-if="selectedRequest">
                 <div>
@@ -2057,7 +2094,7 @@
     >
         <div 
             @click.away="showAddSkillModal = false"
-            class="bg-white rounded-[20px] max-w-[680px] w-full p-6 sm:p-7 space-y-6 border border-neutral-100 shadow-2xl max-h-[90vh] overflow-y-auto"
+            class="bg-white rounded-[20px] max-w-[680px] w-full p-4 sm:p-6 space-y-5 border border-neutral-100 shadow-2xl max-h-[90vh] overflow-y-auto"
         >
             <!-- HEADER -->
             <div class="flex items-center justify-between border-b border-neutral-100 pb-3">
@@ -2297,7 +2334,7 @@
     >
         <div 
             @click.away="showEditSkillModal = false"
-            class="bg-white rounded-[20px] max-w-[680px] w-full p-6 sm:p-7 space-y-6 border border-neutral-100 shadow-2xl max-h-[90vh] overflow-y-auto"
+            class="bg-white rounded-[20px] max-w-[680px] w-full p-4 sm:p-6 space-y-5 border border-neutral-100 shadow-2xl max-h-[90vh] overflow-y-auto"
         >
             <!-- HEADER -->
             <div class="flex items-center justify-between border-b border-neutral-100 pb-3">
