@@ -883,6 +883,7 @@
     ontouchstart=""
     x-data="getProjetPageData()"
     @scroll.window="showScrollTop = ((window.scrollY || window.pageYOffset || document.documentElement.scrollTop) > 100)"
+    :class="{ 'overflow-hidden': orderModalOpen || orderSuccess }"
     class="min-h-screen flex flex-col antialiased selection:bg-[#FFB515] selection:text-black bg-white dark:bg-[#0C0C0C] text-[#111111] dark:text-neutral-100"
 >
 
@@ -1749,7 +1750,7 @@
         <div 
             x-cloak
             x-show="orderModalOpen"
-            class="fixed inset-0 z-[9999] flex items-center justify-center p-3 sm:p-4 overflow-y-auto"
+            class="fixed inset-0 z-[10000] flex items-center justify-center p-2.5 sm:p-4 overflow-y-auto"
             aria-modal="true"
             role="dialog"
         >
@@ -1773,10 +1774,10 @@
                 x-transition:leave="transform transition ease-in duration-200"
                 x-transition:leave-start="scale-100 opacity-100"
                 x-transition:leave-end="scale-95 opacity-0"
-                class="relative w-full max-w-xl bg-white dark:bg-[#151515] rounded-2xl shadow-2xl border border-slate-200/90 dark:border-neutral-800 z-10 my-auto flex flex-col max-h-[92vh] overflow-hidden text-left"
+                class="relative w-full max-w-xl bg-white dark:bg-[#151515] rounded-2xl shadow-2xl border border-slate-200/90 dark:border-neutral-800 z-10 my-auto flex flex-col max-h-[94vh] sm:max-h-[90vh] overflow-hidden text-left"
             >
                 <!-- TOP BAR : < (Back) et ✕ (Close) (Design de référence) -->
-                <div class="px-5 sm:px-6 pt-5 pb-3 flex items-center justify-between border-b border-slate-100 dark:border-neutral-800/80 bg-white dark:bg-[#151515] sticky top-0 z-20">
+                <div class="px-4 sm:px-6 pt-4 sm:pt-5 pb-3 flex items-center justify-between border-b border-slate-100 dark:border-neutral-800/80 bg-white dark:bg-[#151515] sticky top-0 z-20">
                     <button 
                         type="button"
                         @click="orderStep > 1 ? prevOrderStep() : orderModalOpen = false"
@@ -1807,7 +1808,7 @@
                 </div>
 
                 <!-- PROGRESS BAR SEGMENTÉE (Design de référence) -->
-                <div class="px-5 sm:px-6 pt-2 pb-3 bg-white dark:bg-[#151515]">
+                <div class="px-4 sm:px-6 pt-2 pb-3 bg-white dark:bg-[#151515]">
                     <div class="flex items-center gap-1.5 w-full">
                         <div class="flex-1 h-1.5 rounded-full transition-all duration-300" :class="orderStep >= 1 ? 'bg-[#FFB515]' : 'bg-neutral-200 dark:bg-neutral-800'"></div>
                         <div class="flex-1 h-1.5 rounded-full transition-all duration-300" :class="orderStep >= 2 ? 'bg-[#FFB515]' : 'bg-neutral-200 dark:bg-neutral-800'"></div>
@@ -1817,16 +1818,16 @@
                 </div>
 
                 <!-- SCROLLABLE BODY -->
-                <div class="px-5 sm:px-6 py-4 overflow-y-auto space-y-5 flex-1">
+                <div class="px-4 sm:px-6 py-4 overflow-y-auto space-y-4 sm:space-y-5 flex-1">
                     <!-- Récapitulatif prestation sélectionnée -->
-                    <div class="p-3 bg-slate-50 dark:bg-neutral-900/80 rounded-xl border border-slate-200/80 dark:border-neutral-800 flex items-center justify-between text-xs">
-                        <div class="pr-2">
+                    <div class="p-3 sm:p-3.5 bg-slate-50 dark:bg-neutral-900/80 rounded-xl border border-slate-200/80 dark:border-neutral-800 flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 text-xs">
+                        <div class="min-w-0 flex-1">
                             <span class="text-[10px] uppercase font-bold tracking-wider text-black dark:text-[#FFB515] block" x-text="t('target_service')">Prestation ciblée</span>
-                            <strong class="text-slate-900 dark:text-white block text-sm">{{ $service['title'] }}</strong>
-                            <span class="text-slate-500 dark:text-neutral-400">Par {{ $service['author'] }} · {{ $service['delivery_time'] ?? 'Délai à convenir' }}</span>
+                            <strong class="text-slate-900 dark:text-white block text-sm font-bold leading-snug break-words">{{ $service['title'] }}</strong>
+                            <span class="text-slate-500 dark:text-neutral-400 text-xs block mt-0.5">Par {{ $service['author'] }} · {{ $service['delivery_time'] ?? 'Délai à convenir' }}</span>
                         </div>
-                        <div class="text-right shrink-0">
-                            <span class="text-sm font-black text-slate-900 dark:text-white bg-white dark:bg-neutral-800 px-2.5 py-1 rounded-lg border border-slate-200 dark:border-neutral-700 inline-block">{{ $service['price'] }}</span>
+                        <div class="self-start sm:self-auto shrink-0 max-w-full">
+                            <span class="text-xs sm:text-sm font-black text-slate-900 dark:text-white bg-white dark:bg-neutral-800 px-2.5 py-1 sm:px-3 sm:py-1.5 rounded-lg border border-slate-200 dark:border-neutral-700 inline-block break-words max-w-full leading-normal">{{ $service['price'] }}</span>
                         </div>
                     </div>
 
@@ -2233,7 +2234,7 @@
                 </div>
 
                 <!-- FOOTER AVEC BOUTON D'ACTION (Design de référence : Pleine largeur, Bleu vibrant) -->
-                <div class="px-5 sm:px-6 py-4 bg-white dark:bg-[#151515] border-t border-slate-100 dark:border-neutral-800 sticky bottom-0 z-20">
+                <div class="px-4 sm:px-6 py-3 sm:py-4 bg-white dark:bg-[#151515] border-t border-slate-100 dark:border-neutral-800 sticky bottom-0 z-20">
                     <button 
                         type="button" 
                         x-show="orderStep < 4"
@@ -2266,7 +2267,7 @@
         <div 
             x-cloak
             x-show="orderSuccess"
-            class="fixed inset-0 z-[10000] flex items-center justify-center p-4"
+            class="fixed inset-0 z-[10010] flex items-center justify-center p-4"
             aria-modal="true"
             role="dialog"
         >
@@ -2885,7 +2886,7 @@
     <!-- ============================================================================== -->
     <button 
         x-cloak
-        x-show="showScrollTop"
+        x-show="showScrollTop && !orderModalOpen && !orderSuccess"
         x-transition:enter="transition ease-out duration-200"
         x-transition:enter-start="opacity-0 translate-y-4 scale-90"
         x-transition:enter-end="opacity-100 translate-y-0 scale-100"
