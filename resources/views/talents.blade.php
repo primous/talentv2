@@ -1762,6 +1762,16 @@
                                                 style="display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden;"
                                                 x-text="serv.description"
                                             ></p>
+
+                                            <!-- Compétences associées -->
+                                            <div class="flex flex-wrap gap-1.5 pt-1" x-show="serv.skills && serv.skills.length > 0">
+                                                <template x-for="(skill, sIdx) in serv.skills.slice(0, 3)" :key="sIdx">
+                                                    <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-none bg-neutral-100 dark:bg-neutral-800 text-[10px] font-semibold text-neutral-700 dark:text-neutral-300 border border-neutral-200 dark:border-neutral-700 truncate max-w-[200px]" :title="skill" x-text="skill"></span>
+                                                </template>
+                                                <template x-if="serv.skills.length > 3">
+                                                    <span class="inline-flex items-center px-1.5 py-0.5 rounded-none bg-neutral-100 dark:bg-neutral-800 text-[10px] font-bold text-neutral-500 dark:text-neutral-400 border border-neutral-200 dark:border-neutral-700" :title="serv.skills.slice(3).join(', ')" x-text="'+' + (serv.skills.length - 3)"></span>
+                                                </template>
+                                            </div>
                                         </div>
 
                                         <!-- 5. BADGE STATUT & AVIS CLIENTS FONCTIONNEL (DONNÉES 100% AUTHENTIQUES - AUCUN FICTIF) -->

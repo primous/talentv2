@@ -1308,7 +1308,19 @@ class CandidateController extends Controller
             'job_title' => 'required|string|max:255',
             'city' => 'required|string|max:100',
             'country' => 'required|string|max:100',
+            'profile_photo' => 'nullable|file|mimes:jpeg,png,jpg,webp|max:5120',
+            'profile_photo_url' => 'nullable|string|max:1000',
+            'remove_profile_photo' => 'nullable|boolean',
         ]);
+
+        if ($request->boolean('remove_profile_photo')) {
+            $candidate->profile_photo = null;
+        } elseif ($request->hasFile('profile_photo')) {
+            $path = $request->file('profile_photo')->store('candidates/profiles', 'public');
+            $candidate->profile_photo = '/storage/' . $path;
+        } elseif ($request->filled('profile_photo_url')) {
+            $candidate->profile_photo = trim($request->input('profile_photo_url'));
+        }
 
         $candidate->full_name = $request->full_name;
         $candidate->job_title = $request->job_title;
@@ -1384,6 +1396,7 @@ class CandidateController extends Controller
             'exclusions' => 'nullable|string|max:2000',
             'faq' => 'nullable',
             'thumbnail' => 'nullable|file|mimes:jpeg,png,jpg,webp|max:5120',
+            'thumbnail_url' => 'nullable|string|max:1000',
             'realization_id' => 'nullable|integer',
         ], [
             'skill_name.required' => 'L\'intitulé de la compétence est obligatoire.',
@@ -1411,6 +1424,8 @@ class CandidateController extends Controller
         if ($request->hasFile('thumbnail')) {
             $path = $request->file('thumbnail')->store('candidates/thumbnails', 'public');
             $thumbnailPath = '/storage/' . $path;
+        } elseif ($request->filled('thumbnail_url')) {
+            $thumbnailPath = trim($request->input('thumbnail_url'));
         } elseif ($request->filled('realization_id')) {
             // Seule une réalisation déjà publiée du talent connecté peut être choisie
             $realization = PlatformContent::where('candidate_id', $candidate->id)
@@ -1537,6 +1552,7 @@ class CandidateController extends Controller
             'exclusions' => 'nullable|string|max:2000',
             'faq' => 'nullable',
             'thumbnail' => 'nullable|file|mimes:jpeg,png,jpg,webp|max:5120',
+            'thumbnail_url' => 'nullable|string|max:1000',
             'realization_id' => 'nullable|integer',
             'remove_thumbnail' => 'nullable|boolean',
         ], [
@@ -1549,7 +1565,7 @@ class CandidateController extends Controller
             'thumbnail.max' => 'La miniature ne doit pas dépasser 5 Mo.',
         ]);
 
-        // Gestion de la miniature (suppression, nouvel upload, ou sélection d'une réalisation publiée)
+        // Gestion de la miniature (suppression, nouvel upload, URL externe ou sélection d'une réalisation publiée)
         if ($request->boolean('remove_thumbnail')) {
             $competency->deleteThumbnailFile();
             $competency->thumbnail = null;
@@ -1557,6 +1573,9 @@ class CandidateController extends Controller
             $competency->deleteThumbnailFile();
             $path = $request->file('thumbnail')->store('candidates/thumbnails', 'public');
             $competency->thumbnail = '/storage/' . $path;
+        } elseif ($request->filled('thumbnail_url')) {
+            $competency->deleteThumbnailFile();
+            $competency->thumbnail = trim($request->input('thumbnail_url'));
         } elseif ($request->filled('realization_id')) {
             $realization = PlatformContent::where('candidate_id', $candidate->id)
                 ->where('status', 'publie')

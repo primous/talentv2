@@ -856,3 +856,27 @@ Route::prefix('admin')->group(function () {
     Route::post('/parametres/update', [\App\Http\Controllers\AdminController::class, 'updatePlatformSettings'])->name('admin.parametres.update');
 });
 
+// --- DISTRIBUTION SÉCURISÉE DES FICHIERS DU DISQUE /storage (Compatible Serverless Vercel) ---
+Route::get('/storage/{path}', function ($path) {
+    // 1. Priorité au dossier storage public standard de Laravel
+    $storagePath = storage_path('app/public/' . $path);
+    if (file_exists($storagePath) && is_file($storagePath)) {
+        return response()->file($storagePath);
+    }
+
+    // 2. Vérification dans le répertoire temporaire de Vercel /tmp
+    $tmpPath = '/tmp/storage/app/public/' . $path;
+    if (file_exists($tmpPath) && is_file($tmpPath)) {
+        return response()->file($tmpPath);
+    }
+
+    // 3. Vérification dans public/storage (si fichiers statiques)
+    $publicPath = public_path('storage/' . $path);
+    if (file_exists($publicPath) && is_file($publicPath)) {
+        return response()->file($publicPath);
+    }
+
+    abort(404);
+})->where('path', '.*')->name('storage.local');
+
+

@@ -1271,7 +1271,7 @@
             <!-- 4. VUE MON PROFIL PUBLIC (ÉDITION DE LA FICHE DU TALENT)       -->
             <!-- ============================================================== -->
             <div x-show="tab === 'profil'" x-cloak class="space-y-6">
-                <form action="{{ route('candidat.profil.update') }}" method="POST" class="bg-white rounded-3xl p-5 lg:p-6 border border-[#E8E5DC] shadow-sm space-y-6">
+                <form action="{{ route('candidat.profil.update') }}" method="POST" enctype="multipart/form-data" class="bg-white rounded-3xl p-5 lg:p-6 border border-[#E8E5DC] shadow-sm space-y-6">
                     @csrf
                     <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-neutral-100 pb-5">
                         <div>
@@ -1285,7 +1285,45 @@
                         </button>
                     </div>
 
-                    <div class="grid grid-cols-1 md:grid-cols-2 gap-5">
+                                        <!-- Photo de Profil Professionnelle -->
+                    <div class="p-4 rounded-2xl bg-[#F7F7F8] border border-neutral-200/80 space-y-3">
+                        <div class="flex items-center justify-between border-b border-neutral-200/60 pb-2">
+                            <div>
+                                <label class="text-xs font-bold text-neutral-800 block">Photo de profil professionnelle</label>
+                                <p class="text-[11px] text-neutral-500">Affichée sur le catalogue public, vos prestations et dans l'espace client.</p>
+                            </div>
+                            @if ($candidate->profile_photo)
+                                <label class="flex items-center gap-1.5 cursor-pointer text-rose-600 hover:text-rose-800 text-xs font-semibold">
+                                    <input type="checkbox" name="remove_profile_photo" value="1" class="rounded text-rose-600 focus:ring-rose-500">
+                                    <span>Supprimer la photo</span>
+                                </label>
+                            @endif
+                        </div>
+
+                        <div class="flex flex-col sm:flex-row items-center gap-4">
+                            <!-- Aperçu de la photo actuelle -->
+                            <div class="w-16 h-16 rounded-full overflow-hidden border-2 border-[#FFB800] shrink-0 bg-neutral-200 shadow-sm flex items-center justify-center">
+                                @if ($candidate->profile_photo)
+                                    <img src="{{ $candidate->profile_photo }}" alt="{{ $candidate->full_name }}" class="w-full h-full object-cover">
+                                @else
+                                    <span class="text-[#111] font-black text-sm">{{ substr($candidate->full_name, 0, 2) }}</span>
+                                @endif
+                            </div>
+
+                            <div class="flex-1 w-full space-y-2.5">
+                                <div>
+                                    <label class="text-[11px] font-bold text-neutral-600 block mb-1">Téléverser une nouvelle photo (JPG, PNG, WebP — max 5 Mo)</label>
+                                    <input type="file" name="profile_photo" accept="image/jpeg,image/png,image/webp" class="w-full text-xs text-neutral-600 file:mr-3 file:py-2 file:px-3.5 file:rounded-xl file:border-0 file:text-xs file:font-bold file:bg-white file:border-neutral-200 file:border hover:file:bg-[#FFB800] file:text-neutral-900 file:cursor-pointer transition-all">
+                                </div>
+                                <div>
+                                    <label class="text-[11px] font-bold text-neutral-600 block mb-1">Ou renseigner l'URL d'une photo en ligne (Recommandé sur Vercel : Cloudinary, Unsplash, etc.)</label>
+                                    <input type="url" name="profile_photo_url" value="{{ str_starts_with($candidate->profile_photo ?? '', 'http') ? $candidate->profile_photo : '' }}" placeholder="https://..." class="w-full h-10 px-3.5 bg-white border border-[#E8E5DC] rounded-xl text-xs font-medium focus:outline-none focus:border-black">
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+<div class="grid grid-cols-1 md:grid-cols-2 gap-5">
                         <!-- Nom complet -->
                         <div>
                             <label class="block text-xs font-bold text-neutral-700 mb-1.5">Nom et Prénom officiels *</label>
@@ -2116,6 +2154,10 @@
                     <div>
                         <label class="text-[11px] font-bold uppercase tracking-wider text-neutral-400 font-mono block mb-1.5">Téléverser une image (JPG, PNG, WEBP — max 5 Mo)</label>
                         <input type="file" name="thumbnail" accept="image/jpeg,image/png,image/webp" class="w-full text-xs text-neutral-600 file:mr-3 file:py-2.5 file:px-4 file:rounded-xl file:border-0 file:text-xs file:font-bold file:bg-[#F3F4F6] hover:file:bg-[#FFB800] file:text-neutral-900 file:cursor-pointer transition-all">
+                        <div class="pt-2">
+                            <label class="text-[11px] font-bold uppercase tracking-wider text-neutral-400 font-mono block mb-1.5">Ou coller l'URL d'une image web directe (recommandé)</label>
+                            <input type="url" name="thumbnail_url" placeholder="https://... (ex: Unsplash, Cloudinary)" class="w-full h-11 px-3 bg-[#F3F4F6] border-0 rounded-xl text-xs font-semibold text-[#111111] focus:ring-2 focus:ring-[#FFB800] focus:bg-white focus:outline-none transition-all">
+                        </div>
                     </div>
 
                     @if (!empty($publishedRealizations) && $publishedRealizations->count() > 0)
@@ -2349,6 +2391,10 @@
                     <div>
                         <label class="text-[11px] font-bold uppercase tracking-wider text-neutral-400 font-mono block mb-1.5" x-text="editingSkill.thumbnail ? 'Remplacer par une nouvelle image (JPG, PNG, WEBP — max 5 Mo)' : 'Téléverser une image (JPG, PNG, WEBP — max 5 Mo)'"></label>
                         <input type="file" name="thumbnail" accept="image/jpeg,image/png,image/webp" class="w-full text-xs text-neutral-600 file:mr-3 file:py-2.5 file:px-4 file:rounded-xl file:border-0 file:text-xs file:font-bold file:bg-[#F3F4F6] hover:file:bg-[#FFB800] file:text-neutral-900 file:cursor-pointer transition-all">
+                        <div class="pt-2">
+                            <label class="text-[11px] font-bold uppercase tracking-wider text-neutral-400 font-mono block mb-1.5">Ou coller l'URL d'une image web directe (recommandé)</label>
+                            <input type="url" name="thumbnail_url" placeholder="https://... (ex: Unsplash, Cloudinary)" class="w-full h-11 px-3 bg-[#F3F4F6] border-0 rounded-xl text-xs font-semibold text-[#111111] focus:ring-2 focus:ring-[#FFB800] focus:bg-white focus:outline-none transition-all">
+                        </div>
                     </div>
 
                     @if (!empty($publishedRealizations) && $publishedRealizations->count() > 0)

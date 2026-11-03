@@ -463,5 +463,8 @@ class DatabaseSeeder extends Seeder
                 'agreed_public_profile_policy' => true,
             ]
         );
+
+        // Appel du seeder d'administration pour injecter les compétences, contenus et demandes de projet
+        $this->call(AdminDataSeeder::class);
     }
 }
