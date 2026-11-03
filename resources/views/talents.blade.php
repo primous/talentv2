@@ -3,8 +3,46 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Catalogue des Prestations & Talents Certifiés | Talent Club</title>
-    <meta name="description" content="Découvrez tous les talents et services vérifiés de Talent Club : développement web, design de logo, motion design, applications mobiles. Audités avant publication.">
+    
+    <!-- SEO Primaire (Title 58 car., Meta Desc 148 car.) -->
+    <title>Catalogue des Talents & Prestations Vérifiées | Talent Club</title>
+    <meta name="description" content="Explorez notre catalogue de talents audités : développeurs web, designers UI/UX, monteurs vidéo et experts marketing disponibles immédiatement.">
+    <meta name="keywords" content="catalogue freelances, prestataires vérifiés afrique, développeur freelance, graphiste certifié, talent club">
+    <meta name="robots" content="index, follow, max-image-preview:large">
+    <link rel="canonical" href="{{ url('/talents') }}">
+
+    <!-- Open Graph / Facebook -->
+    <meta property="og:type" content="website">
+    <meta property="og:url" content="{{ url('/talents') }}">
+    <meta property="og:title" content="Catalogue des Talents & Prestations Vérifiées | Talent Club">
+    <meta property="og:description" content="Explorez notre catalogue de talents audités : développeurs web, designers UI/UX, monteurs vidéo et experts marketing disponibles immédiatement.">
+    <meta property="og:image" content="{{ asset('images/hero-talents.webp') }}">
+    <meta property="og:site_name" content="Talent Club">
+    <meta property="og:locale" content="fr_FR">
+
+    <!-- Twitter Card -->
+    <meta name="twitter:card" content="summary_large_image">
+    <meta name="twitter:url" content="{{ url('/talents') }}">
+    <meta name="twitter:title" content="Catalogue des Talents & Prestations Vérifiées | Talent Club">
+    <meta name="twitter:description" content="Explorez notre catalogue de talents audités : développeurs web, designers UI/UX, monteurs vidéo et experts marketing disponibles immédiatement.">
+    <meta name="twitter:image" content="{{ asset('images/hero-talents.webp') }}">
+
+    <!-- Données structurées Schema.org JSON-LD (CollectionPage) -->
+    <script type="application/ld+json">
+    {
+      "@context": "https://schema.org",
+      "@type": "CollectionPage",
+      "name": "Catalogue des Talents & Prestations Vérifiées",
+      "description": "Explorez notre catalogue de talents audités en Afrique francophone.",
+      "url": "{{ url('/talents') }}",
+      "publisher": {
+        "@type": "Organization",
+        "name": "Talent Club",
+        "url": "{{ url('/') }}",
+        "logo": "{{ asset('images/logo.png') }}"
+      }
+    }
+    </script>
 
     <!-- Favicon -->
     <link rel="icon" type="image/x-icon" href="{{ asset('favicon.ico') }}">
@@ -1719,6 +1757,7 @@
                                             :alt="serv.title" 
                                             class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
                                             loading="lazy"
+                                            decoding="async"
                                         />
                                         
                                         <!-- Badge Catégorie sobre en haut à gauche -->
@@ -1759,6 +1798,8 @@
                                                     :src="serv.author_avatar" 
                                                     :alt="serv.author" 
                                                     class="w-7 h-7 rounded-none object-cover border border-neutral-300 dark:border-neutral-700 flex-shrink-0"
+                                                    loading="lazy"
+                                                    decoding="async"
                                                 />
                                                 <div class="min-w-0 flex flex-col justify-center">
                                                     <div class="flex items-center gap-1.5">

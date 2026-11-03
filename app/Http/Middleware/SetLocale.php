@@ -21,14 +21,16 @@ class SetLocale
             $candidate = strtolower(trim((string) $request->query('lang')));
             if (in_array($candidate, ['fr', 'en'])) {
                 $locale = $candidate;
-                session(['locale' => $locale]);
+                if ($request->hasSession()) {
+                    $request->session()->put('locale', $locale);
+                }
                 cookie()->queue(cookie('talent_locale', $locale, 60 * 24 * 365, '/', null, false, false));
             }
         }
 
         // 2. Session locale
-        if (!$locale && session()->has('locale')) {
-            $candidate = strtolower((string) session('locale'));
+        if (!$locale && $request->hasSession() && $request->session()->has('locale')) {
+            $candidate = strtolower((string) $request->session()->get('locale'));
             if (in_array($candidate, ['fr', 'en'])) {
                 $locale = $candidate;
             }
@@ -39,7 +41,9 @@ class SetLocale
             $candidate = strtolower((string) $request->cookie('talent_locale'));
             if (in_array($candidate, ['fr', 'en'])) {
                 $locale = $candidate;
-                session(['locale' => $locale]);
+                if ($request->hasSession()) {
+                    $request->session()->put('locale', $locale);
+                }
             }
         }
 

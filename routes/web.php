@@ -23,12 +23,12 @@ function getTalentServices() {
             'price_num' => 120000,
             'old_price' => '180 000 FCFA',
             'express' => false,
-            'image' => '/images/service-web-development.jpg',
+            'image' => '/images/service-web-development.webp',
             'gallery' => [
-                '/images/service-web-development.jpg',
-                '/images/service-flutter-app.jpg',
-                '/images/service-design-branding.jpg',
-                '/images/case-study-puno.jpg'
+                '/images/service-web-development.webp',
+                '/images/service-flutter-app.webp',
+                '/images/service-design-branding.webp',
+                '/images/case-study-puno.webp'
             ],
             'vendor_sales_total' => 112,
             'vendor_active_orders' => 4,
@@ -130,12 +130,12 @@ function getTalentServices() {
             'price_num' => 25000,
             'old_price' => '45 000 FCFA',
             'express' => true,
-            'image' => '/images/service-design-branding.jpg',
+            'image' => '/images/service-design-branding.webp',
             'gallery' => [
-                '/images/service-design-branding.jpg',
-                '/images/service-web-development.jpg',
-                '/images/service-video-motion.jpg',
-                '/images/case-study-puno.jpg'
+                '/images/service-design-branding.webp',
+                '/images/service-web-development.webp',
+                '/images/service-video-motion.webp',
+                '/images/case-study-puno.webp'
             ],
             'vendor_sales_total' => 165,
             'vendor_active_orders' => 2,
@@ -237,12 +237,12 @@ function getTalentServices() {
             'price_num' => 35000,
             'old_price' => '60 000 FCFA',
             'express' => true,
-            'image' => '/images/service-video-motion.jpg',
+            'image' => '/images/service-video-motion.webp',
             'gallery' => [
-                '/images/service-video-motion.jpg',
-                '/images/service-web-development.jpg',
-                '/images/service-flutter-app.jpg',
-                '/images/case-study-puno.jpg'
+                '/images/service-video-motion.webp',
+                '/images/service-web-development.webp',
+                '/images/service-flutter-app.webp',
+                '/images/case-study-puno.webp'
             ],
             'vendor_sales_total' => 134,
             'vendor_active_orders' => 3,
@@ -344,12 +344,12 @@ function getTalentServices() {
             'price_num' => 250000,
             'old_price' => '350 000 FCFA',
             'express' => false,
-            'image' => '/images/service-flutter-app.jpg',
+            'image' => '/images/service-flutter-app.webp',
             'gallery' => [
-                '/images/service-flutter-app.jpg',
-                '/images/service-web-development.jpg',
-                '/images/service-design-branding.jpg',
-                '/images/case-study-puno.jpg'
+                '/images/service-flutter-app.webp',
+                '/images/service-web-development.webp',
+                '/images/service-design-branding.webp',
+                '/images/case-study-puno.webp'
             ],
             'vendor_sales_total' => 148,
             'vendor_active_orders' => 3,
@@ -535,12 +535,12 @@ function getTalentServices() {
             'price_num' => 90000,
             'old_price' => '140 000 FCFA',
             'express' => false,
-            'image' => '/images/service-design-branding.jpg',
+            'image' => '/images/service-design-branding.webp',
             'gallery' => [
-                '/images/service-design-branding.jpg',
-                '/images/service-web-development.jpg',
-                '/images/service-flutter-app.jpg',
-                '/images/case-study-puno.jpg'
+                '/images/service-design-branding.webp',
+                '/images/service-web-development.webp',
+                '/images/service-flutter-app.webp',
+                '/images/case-study-puno.webp'
             ],
             'vendor_sales_total' => 88,
             'vendor_active_orders' => 2,
@@ -642,12 +642,12 @@ function getTalentServices() {
             'price_num' => 45000,
             'old_price' => '75 000 FCFA',
             'express' => true,
-            'image' => '/images/service-video-motion.jpg',
+            'image' => '/images/service-video-motion.webp',
             'gallery' => [
-                '/images/service-video-motion.jpg',
-                '/images/service-web-development.jpg',
-                '/images/service-design-branding.jpg',
-                '/images/case-study-puno.jpg'
+                '/images/service-video-motion.webp',
+                '/images/service-web-development.webp',
+                '/images/service-design-branding.webp',
+                '/images/case-study-puno.webp'
             ],
             'vendor_sales_total' => 97,
             'vendor_active_orders' => 3,
@@ -734,6 +734,23 @@ function getTalentServices() {
     ];
 }
 }
+
+// --- SEO & MOTEURS DE RECHERCHE ---
+Route::get('/sitemap.xml', [\App\Http\Controllers\SeoController::class, 'sitemap'])
+    ->name('seo.sitemap')
+    ->withoutMiddleware([
+        \Illuminate\Foundation\Http\Middleware\VerifyCsrfToken::class,
+        \Illuminate\Session\Middleware\StartSession::class,
+        \Illuminate\View\Middleware\ShareErrorsFromSession::class,
+    ]);
+
+Route::get('/robots.txt', [\App\Http\Controllers\SeoController::class, 'robots'])
+    ->name('seo.robots')
+    ->withoutMiddleware([
+        \Illuminate\Foundation\Http\Middleware\VerifyCsrfToken::class,
+        \Illuminate\Session\Middleware\StartSession::class,
+        \Illuminate\View\Middleware\ShareErrorsFromSession::class,
+    ]);
 
 Route::get('/', function () {
     $services = getTalentServices();

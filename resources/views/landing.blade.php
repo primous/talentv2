@@ -2,14 +2,69 @@
 <html lang="fr" class="scroll-smooth" x-data="talentApp()" :lang="currentLang">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title x-text="t('page_title')">TALENT CLUB — Le talent qui transforme vos idées en résultats.</title>
-    <meta name="description" content="Découvrez des professionnels certifiés en développement web, design graphique, motion design, copywriting et marketing digital. Des profils fiables et vérifiés, pour collaborer en toute confiance.">
-    <meta name="keywords" content="talent club, freelances vérifiés, recrutement créatif, développeur web, UI/UX designer, motion designer, bénin, afrique francophone">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    
+    <!-- SEO Primaire (Title 54 car., Meta Desc 144 car.) -->
+    <title>Talent Club | Talents & Freelances Certifiés en Afrique</title>
+    <meta name="description" content="Trouvez et recrutez des freelances vérifiés en Afrique : développement web, design, marketing et vidéo. Profils audités et livrables garantis.">
+    <meta name="keywords" content="talent club, freelances vérifiés, recrutement freelance afrique, développeur web bénin, graphiste côte d'ivoire, motion designer sénégal">
     <meta name="author" content="Talent Club">
-    <meta property="og:title" content="TALENT CLUB — La référence des compétences vérifiées">
-    <meta property="og:description" content="Des profils fiables et vérifiés, pour collaborer en toute confiance.">
+    <meta name="robots" content="index, follow, max-image-preview:large, max-snippet:-1, max-video-preview:-1">
+    <link rel="canonical" href="{{ url('/') }}">
+
+    <!-- Google Search Console -->
+    <meta name="google-site-verification" content="{{ env('GOOGLE_SITE_VERIFICATION', 'GSC_VERIFICATION_TOKEN') }}">
+
+    <!-- Open Graph / Facebook -->
     <meta property="og:type" content="website">
+    <meta property="og:url" content="{{ url('/') }}">
+    <meta property="og:title" content="Talent Club | Talents & Freelances Certifiés en Afrique">
+    <meta property="og:description" content="Trouvez et recrutez des freelances vérifiés en Afrique : développement web, design, marketing et vidéo. Profils audités et livrables garantis.">
+    <meta property="og:image" content="{{ asset('images/hero-talents.webp') }}">
+    <meta property="og:image:width" content="1200">
+    <meta property="og:image:height" content="630">
+    <meta property="og:site_name" content="Talent Club">
+    <meta property="og:locale" content="fr_FR">
+
+    <!-- Twitter Card -->
+    <meta name="twitter:card" content="summary_large_image">
+    <meta name="twitter:url" content="{{ url('/') }}">
+    <meta name="twitter:title" content="Talent Club | Talents & Freelances Certifiés en Afrique">
+    <meta name="twitter:description" content="Trouvez et recrutez des freelances vérifiés en Afrique : développement web, design, marketing et vidéo. Profils audités et livrables garantis.">
+    <meta name="twitter:image" content="{{ asset('images/hero-talents.webp') }}">
+
+    <!-- Données structurées Schema.org JSON-LD (Organization & WebSite) -->
+    <script type="application/ld+json">
+    {
+      "@context": "https://schema.org",
+      "@graph": [
+        {
+          "@type": "Organization",
+          "@id": "{{ url('/') }}#organization",
+          "name": "Talent Club",
+          "url": "{{ url('/') }}",
+          "logo": {
+            "@type": "ImageObject",
+            "url": "{{ asset('images/logo.png') }}"
+          },
+          "description": "Plateforme sélective de talents et freelances certifiés en Afrique francophone."
+        },
+        {
+          "@type": "WebSite",
+          "@id": "{{ url('/') }}#website",
+          "url": "{{ url('/') }}",
+          "name": "Talent Club",
+          "description": "Trouvez et recrutez des freelances vérifiés en Afrique.",
+          "publisher": { "@id": "{{ url('/') }}#organization" },
+          "potentialAction": {
+            "@type": "SearchAction",
+            "target": "{{ url('/talents') }}?q={search_term_string}",
+            "query-input": "required name=search_term_string"
+          }
+        }
+      ]
+    }
+    </script>
 
     <!-- Favicon -->
     <link rel="icon" type="image/x-icon" href="{{ asset('favicon.ico') }}">
@@ -96,6 +151,21 @@
 
     <style>
         [x-cloak] { display: none !important; }
+        /* Empêcher le zoom automatique intempestif d'iOS Safari au focus des champs */
+        @media screen and (max-width: 768px) {
+            input[type="text"],
+            input[type="email"],
+            input[type="tel"],
+            input[type="number"],
+            input[type="password"],
+            input[type="search"],
+            input[type="url"],
+            select,
+            textarea {
+                font-size: 16px !important;
+            }
+        }
+
         
         body {
             font-family: 'Montserrat', sans-serif;
@@ -818,10 +888,12 @@
                     
                     <!-- Image photographique sans marge -->
                     <img 
-                        src="{{ asset('images/hero-talents.jpg') ?? '/images/hero-talents.jpg' }}" 
+                        src="{{ asset('images/hero-talents.webp') ?? '/images/hero-talents.webp' }}" 
                         alt="Talents créatifs et développeurs certifiés Talent Club" 
                         class="w-full h-full object-cover object-center"
                         loading="eager"
+                        fetchpriority="high"
+                        decoding="async"
                     />
 
                     <!-- Bulle de dialogue signature Wayi (« Devis prêt » adapté à Talent Club) -->
@@ -1398,7 +1470,7 @@
                             aria-label="Site Vitrine Professionnel Moderne & Responsive"
                         >
                             <img 
-                                src="{{ asset('images/service-web-development.jpg') ?? '/images/service-web-development.jpg' }}" 
+                                src="{{ asset('images/service-web-development.webp') ?? '/images/service-web-development.webp' }}" 
                                 alt="Site Vitrine Professionnel Moderne & Responsive" 
                                 class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
                                 loading="lazy"
@@ -1507,7 +1579,7 @@
                             aria-label="Création de Logo & Identité Visuelle Complète"
                         >
                             <img 
-                                src="{{ asset('images/service-design-branding.jpg') ?? '/images/service-design-branding.jpg' }}" 
+                                src="{{ asset('images/service-design-branding.webp') ?? '/images/service-design-branding.webp' }}" 
                                 alt="Création de Logo & Identité Visuelle Complète" 
                                 class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
                                 loading="lazy"
@@ -1616,7 +1688,7 @@
                             aria-label="Pack 5 Vidéos Courtes Virales (Reels / TikTok)"
                         >
                             <img 
-                                src="{{ asset('images/service-video-motion.jpg') ?? '/images/service-video-motion.jpg' }}" 
+                                src="{{ asset('images/service-video-motion.webp') ?? '/images/service-video-motion.webp' }}" 
                                 alt="Pack 5 Vidéos Courtes Virales (Reels / TikTok)" 
                                 class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
                                 loading="lazy"
@@ -1725,7 +1797,7 @@
                             aria-label="Design System & Refonte UI/UX Fintech Africaine"
                         >
                             <img 
-                                src="{{ asset('images/service-design-branding.jpg') ?? '/images/service-design-branding.jpg' }}" 
+                                src="{{ asset('images/service-design-branding.webp') ?? '/images/service-design-branding.webp' }}" 
                                 alt="Design System & Refonte UI/UX Fintech Africaine" 
                                 class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
                                 loading="lazy"
@@ -1834,7 +1906,7 @@
                             aria-label="Stratégie Social Media & Copywriting de Vente 30 jours"
                         >
                             <img 
-                                src="{{ asset('images/case-study-puno.jpg') ?? '/images/case-study-puno.jpg' }}" 
+                                src="{{ asset('images/case-study-puno.webp') ?? '/images/case-study-puno.webp' }}" 
                                 alt="Stratégie Social Media & Copywriting de Vente 30 jours" 
                                 class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
                                 loading="lazy"
@@ -2178,7 +2250,7 @@
                         <div class="lg:col-span-5">
                             <div class="rounded-none overflow-hidden border-2 border-white/10 shadow-2xl aspect-[4/3] relative">
                                 <img 
-                                    src="{{ asset('images/method-audit.jpg') ?? '/images/method-audit.jpg' }}" 
+                                    src="{{ asset('images/method-audit.webp') ?? '/images/method-audit.webp' }}" 
                                     alt="Audit technique d'un profil par l'équipe Talent Club" 
                                     class="w-full h-full object-cover"
                                 />
@@ -2240,7 +2312,7 @@
                         <div class="relative mx-auto max-w-md lg:max-w-none">
                             <div class="rounded-none overflow-hidden shadow-2xl border-4 border-white dark:border-neutral-800 aspect-[4/3]">
                                 <img 
-                                    src="{{ asset('images/recruitment-handshake.jpg') ?? '/images/recruitment-handshake.jpg' }}" 
+                                    src="{{ asset('images/recruitment-handshake.webp') ?? '/images/recruitment-handshake.webp' }}" 
                                     alt="Partenariat réussi avec un talent certifié" 
                                     class="w-full h-full object-cover"
                                 />
@@ -2308,7 +2380,7 @@
                         <div class="relative rounded-none overflow-hidden bg-[#161616] dark:bg-[#121212] text-white border border-neutral-800 shadow-md group min-h-[440px] flex flex-col justify-between p-6 sm:p-7">
                             <!-- Image de fond avec filtre monochrome contrasté -->
                             <img 
-                                src="{{ asset('images/case-study-puno.jpg') ?? '/images/case-study-puno.jpg' }}" 
+                                src="{{ asset('images/case-study-puno.webp') ?? '/images/case-study-puno.webp' }}" 
                                 alt="David Lee - Puno Tech" 
                                 class="absolute inset-0 w-full h-full object-cover object-top grayscale contrast-125 opacity-70 group-hover:scale-105 group-hover:opacity-85 transition-all duration-500"
                             />
@@ -2486,7 +2558,7 @@
                         <div class="relative rounded-none overflow-hidden bg-[#161616] dark:bg-[#121212] text-white border border-neutral-800 shadow-md group min-h-[440px] flex flex-col justify-between p-6 sm:p-7">
                             <!-- Image de fond avec filtre monochrome contrasté -->
                             <img 
-                                src="{{ asset('images/case-study-elite.jpg') ?? '/images/case-study-elite.jpg' }}" 
+                                src="{{ asset('images/case-study-elite.webp') ?? '/images/case-study-elite.webp' }}" 
                                 alt="Aminata Touré - Maison Élite" 
                                 class="absolute inset-0 w-full h-full object-cover object-top grayscale contrast-125 opacity-70 group-hover:scale-105 group-hover:opacity-85 transition-all duration-500"
                             />
@@ -2645,7 +2717,7 @@
                         <!-- Partie 1 (Gauche) : Visuel d'audit technique / Blueprint / Outils réels -->
                         <div class="lg:col-span-3 relative min-h-[240px] lg:min-h-full rounded-none overflow-hidden border border-neutral-200 dark:border-neutral-800 group bg-neutral-900">
                             <img 
-                                src="{{ asset('images/method-audit.jpg') ?? '/images/method-audit.jpg' }}" 
+                                src="{{ asset('images/method-audit.webp') ?? '/images/method-audit.webp' }}" 
                                 alt="Protocole d'audit technique Talent Club" 
                                 class="w-full h-full object-cover grayscale contrast-125 group-hover:scale-105 group-hover:grayscale-0 transition-all duration-500"
                             />

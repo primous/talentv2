@@ -3,8 +3,83 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>{{ $service['title'] }} | Talent Club Pro</title>
-    <meta name="description" content="{{ $service['description'] }}">
+    
+    <!-- SEO Primaire (Title dynamique ~55 car., Meta Desc ~150 car.) -->
+    <title>{{ \Illuminate\Support\Str::limit($service['title'], 45) }} | Talent Club</title>
+    <meta name="description" content="{{ \Illuminate\Support\Str::limit(strip_tags($service['description'] ?? 'Commandez cette prestation vérifiée sur Talent Club avec un délai garanti et un accompagnement sur mesure.'), 150) }}">
+    <meta name="keywords" content="{{ $service['title'] }}, freelance afrique, talent club, {{ $service['category'] }}, {{ $service['author'] }}">
+    <meta name="robots" content="index, follow, max-image-preview:large">
+    <link rel="canonical" href="{{ url()->current() }}">
+
+    <!-- Open Graph / Facebook -->
+    <meta property="og:type" content="article">
+    <meta property="og:url" content="{{ url()->current() }}">
+    <meta property="og:title" content="{{ \Illuminate\Support\Str::limit($service['title'], 60) }} | Talent Club">
+    <meta property="og:description" content="{{ \Illuminate\Support\Str::limit(strip_tags($service['description'] ?? 'Prestation certifiée sur Talent Club.'), 150) }}">
+    <meta property="og:image" content="{{ str_starts_with($service['image'], 'http') ? $service['image'] : asset($service['image']) }}">
+    <meta property="og:site_name" content="Talent Club">
+    <meta property="og:locale" content="fr_FR">
+
+    <!-- Twitter Card -->
+    <meta name="twitter:card" content="summary_large_image">
+    <meta name="twitter:url" content="{{ url()->current() }}">
+    <meta name="twitter:title" content="{{ \Illuminate\Support\Str::limit($service['title'], 60) }} | Talent Club">
+    <meta name="twitter:description" content="{{ \Illuminate\Support\Str::limit(strip_tags($service['description'] ?? 'Prestation certifiée sur Talent Club.'), 150) }}">
+    <meta name="twitter:image" content="{{ str_starts_with($service['image'], 'http') ? $service['image'] : asset($service['image']) }}">
+
+    <!-- Données structurées Schema.org JSON-LD (Service & BreadcrumbList) -->
+    <script type="application/ld+json">
+    {
+      "@context": "https://schema.org",
+      "@graph": [
+        {
+          "@type": "Service",
+          "name": "{{ addslashes($service['title']) }}",
+          "description": "{{ addslashes(\Illuminate\Support\Str::limit(strip_tags($service['description'] ?? ''), 250)) }}",
+          "provider": {
+            "@type": "Person",
+            "name": "{{ addslashes($service['author']) }}",
+            "jobTitle": "{{ addslashes($service['author_role'] ?? 'Professionnel Certifié') }}"
+          },
+          "offers": {
+            "@type": "Offer",
+            "price": "{{ $service['price_num'] ?? 0 }}",
+            "priceCurrency": "XOF",
+            "availability": "https://schema.org/InStock"
+          },
+          "image": "{{ str_starts_with($service['image'], 'http') ? $service['image'] : asset($service['image']) }}"
+        },
+        {
+          "@type": "BreadcrumbList",
+          "itemListElement": [
+            {
+              "@type": "ListItem",
+              "position": 1,
+              "name": "Accueil",
+              "item": "{{ url('/') }}"
+            },
+            {
+              "@type": "ListItem",
+              "position": 2,
+              "name": "Talents",
+              "item": "{{ url('/talents') }}"
+            },
+            {
+              "@type": "ListItem",
+              "position": 3,
+              "name": "{{ addslashes($service['category']) }}",
+              "item": "{{ url('/talents') }}"
+            },
+            {
+              "@type": "ListItem",
+              "position": 4,
+              "name": "{{ addslashes($service['title']) }}"
+            }
+          ]
+        }
+      ]
+    }
+    </script>
 
     <!-- Favicon -->
     <link rel="icon" type="image/x-icon" href="{{ asset('favicon.ico') }}">
@@ -1303,8 +1378,7 @@
         @endif
 
 
-                <!-- H1 sémantique accessible pour le référencement et la hiérarchie de la page -->
-        <h1 class="sr-only">{{ $service['title'] }}</h1>
+        
 
 
         <!-- ============================================================================== -->
@@ -1320,6 +1394,29 @@
                     <!-- ========================================================== -->
                     <div class="lg:col-span-7 space-y-8 sm:space-y-10 text-left">
                         
+                        <!-- FIL D'ARIANE BREADCRUMB & H1 OFFICIEL VISIBLE -->
+                        <div class="space-y-2 pb-2">
+                            <nav aria-label="Fil d'Ariane" class="flex flex-wrap items-center gap-2 text-xs font-semibold text-neutral-500">
+                                <a href="{{ url('/') }}" class="hover:underline hover:text-black dark:hover:text-white transition-colors">Accueil</a>
+                                <span>/</span>
+                                <a href="{{ url('/talents') }}" class="hover:underline hover:text-black dark:hover:text-white transition-colors">Talents & Prestations</a>
+                                <span>/</span>
+                                <span class="text-neutral-900 dark:text-neutral-200 font-bold">{{ $service['category'] }}</span>
+                            </nav>
+                            <h1 class="text-2xl sm:text-3xl lg:text-4xl font-extrabold text-black dark:text-white leading-tight">
+                                {{ $service['title'] }}
+                            </h1>
+                            <div class="flex flex-wrap items-center gap-2 text-xs text-neutral-500 dark:text-neutral-400">
+                                <span>Par <strong class="text-neutral-900 dark:text-white">{{ $service['author'] }}</strong></span>
+                                <span>·</span>
+                                <span>{{ $service['author_role'] ?? 'Professionnel Certifié' }}</span>
+                                @if(!empty($cand->city))
+                                <span>·</span>
+                                <span>{{ $cand->city }}</span>
+                                @endif
+                            </div>
+                        </div>
+
                         <!-- 1. GALERIE SHOWCASE MULTIMÉDIA -->
                         <div class="space-y-3">
                             <!-- Image Principale Active (Ratio 16:10) -->
@@ -1329,6 +1426,8 @@
                                     src="{{ $service['image'] }}" 
                                     alt="{{ $service['title'] }}" 
                                     class="w-full h-full object-cover transition-all duration-300"
+                                    fetchpriority="high"
+                                    decoding="async"
                                 />
 
                                 <!-- Badge catégorie supérieur droit -->

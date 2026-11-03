@@ -1075,21 +1075,21 @@ class CandidateController extends Controller
     {
         $cat = mb_strtolower($category ?? '');
         if (str_contains($cat, 'développ') || str_contains($cat, 'web') || str_contains($cat, 'informatique')) {
-            return '/images/service-web-development.jpg';
+            return '/images/service-web-development.webp';
         }
         if (str_contains($cat, 'flutter') || str_contains($cat, 'mobile')) {
-            return '/images/service-flutter-app.jpg';
+            return '/images/service-flutter-app.webp';
         }
         if (str_contains($cat, 'design') || str_contains($cat, 'graph')) {
-            return '/images/service-design-branding.jpg';
+            return '/images/service-design-branding.webp';
         }
         if (str_contains($cat, 'vidéo') || str_contains($cat, 'audio') || str_contains($cat, 'motion')) {
-            return '/images/service-video-motion.jpg';
+            return '/images/service-video-motion.webp';
         }
         if (str_contains($cat, 'market') || str_contains($cat, 'rédac') || str_contains($cat, 'copy')) {
-            return '/images/case-study-puno.jpg';
+            return '/images/case-study-puno.webp';
         }
-        return '/images/case-study-elite.jpg';
+        return '/images/case-study-elite.webp';
     }
 
     /**
@@ -1199,11 +1199,14 @@ class CandidateController extends Controller
                 $badgeColor = 'bg-neutral-100 text-neutral-700 border-neutral-300 dark:bg-neutral-800 dark:text-neutral-300 dark:border-neutral-700';
             }
 
+            $slugTitle = \Illuminate\Support\Str::slug($title);
+            $prestationIdParam = $primaryComp ? ($primaryComp->id . ($slugTitle ? '-' . $slugTitle : '')) : ($cand->tracking_code ?: $cand->id);
+
             $services[$talentKey] = [
                 'id' => (string) ($primaryComp?->id ?? $cand->id),
                 'competency_id' => $primaryComp?->id,
                 'candidate_id' => $cand->id,
-                'prestation_url' => $primaryComp ? route('prestation.show', $primaryComp->id) : route('projet', ['id' => $cand->tracking_code ?: $cand->id]),
+                'prestation_url' => $primaryComp ? route('prestation.show', $prestationIdParam) : route('projet', ['id' => $prestationIdParam]),
                 'title' => $title,
                 'category' => $cand->category ?: 'Service Professionnel',
                 'author' => $cand->professional_name ?: $cand->full_name,
@@ -2159,11 +2162,25 @@ class CandidateController extends Controller
      */
     public function showPrestation(Request $request, $id)
     {
-        $competency = TalentCompetency::with([
-            'candidate.platformContents',
-            'candidate.competencies',
-            'candidate.projectRequests'
-        ])->find($id);
+        $numericId = is_numeric($id) ? (int)$id : (int)explode('-', (string)$id)[0];
+
+        $competency = null;
+        if ($numericId > 0) {
+            $competency = TalentCompetency::with([
+                'candidate.platformContents',
+                'candidate.competencies',
+                'candidate.projectRequests'
+            ])->find($numericId);
+        }
+
+        if (!$competency) {
+            $cleanSearch = str_replace('-', ' ', (string)$id);
+            $competency = TalentCompetency::with([
+                'candidate.platformContents',
+                'candidate.competencies',
+                'candidate.projectRequests'
+            ])->where('competency_name', 'like', "%{$cleanSearch}%")->first();
+        }
 
         if (!$competency) {
             abort(404, "Prestation introuvable.");

@@ -3,8 +3,29 @@
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
-    <title>Candidature & Référencement de Talent — Talent Club</title>
-    <meta name="description" content="Rejoignez le réseau des talents vérifiés Talent Club. Formulaire de candidature progressif, conditionnel et orienté vers les preuves.">
+    
+    <!-- SEO Primaire (Title 59 car., Meta Desc 147 car.) -->
+    <title>Devenir Talent Certifié & Trouver des Missions | Talent Club</title>
+    <meta name="description" content="Rejoignez le réseau des meilleurs freelances en Afrique de l'Ouest. Déposez votre candidature pour être certifié et recevoir des projets qualifiés.">
+    <meta name="keywords" content="devenir freelance vérifié, postuler talent club, missions freelance afrique, freelances bénin côte d'ivoire">
+    <meta name="robots" content="index, follow">
+    <link rel="canonical" href="{{ url('/candidature') }}">
+
+    <!-- Open Graph / Facebook -->
+    <meta property="og:type" content="website">
+    <meta property="og:url" content="{{ url('/candidature') }}">
+    <meta property="og:title" content="Devenir Talent Certifié & Trouver des Missions | Talent Club">
+    <meta property="og:description" content="Rejoignez le réseau des meilleurs freelances en Afrique de l'Ouest. Déposez votre candidature pour être certifié et recevoir des projets qualifiés.">
+    <meta property="og:image" content="{{ asset('images/hero-talents.webp') }}">
+    <meta property="og:site_name" content="Talent Club">
+    <meta property="og:locale" content="fr_FR">
+
+    <!-- Twitter Card -->
+    <meta name="twitter:card" content="summary_large_image">
+    <meta name="twitter:url" content="{{ url('/candidature') }}">
+    <meta name="twitter:title" content="Devenir Talent Certifié & Trouver des Missions | Talent Club">
+    <meta name="twitter:description" content="Rejoignez le réseau des meilleurs freelances en Afrique de l'Ouest. Déposez votre candidature pour être certifié et recevoir des projets qualifiés.">
+    <meta name="twitter:image" content="{{ asset('images/hero-talents.webp') }}">
     <!-- Favicon -->
     <link rel="icon" type="image/x-icon" href="{{ asset('favicon.ico') }}">
     <link rel="icon" type="image/png" sizes="32x32" href="{{ asset('images/favicon.png') }}">
