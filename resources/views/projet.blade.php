@@ -30,7 +30,7 @@
     <!-- Données structurées Schema.org JSON-LD (Service & BreadcrumbList) -->
     <script type="application/ld+json">
     {
-      "@context": "https://schema.org",
+      "@@context": "https://schema.org",
       "@graph": [
         {
           "@type": "Service",

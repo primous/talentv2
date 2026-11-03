@@ -36,7 +36,7 @@
     <!-- Données structurées Schema.org JSON-LD (Organization & WebSite) -->
     <script type="application/ld+json">
     {
-      "@context": "https://schema.org",
+      "@@context": "https://schema.org",
       "@graph": [
         {
           "@type": "Organization",

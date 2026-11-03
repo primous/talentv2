@@ -164,3 +164,4 @@ class SeoController extends Controller
             ->header('Content-Type', 'text/plain; charset=utf-8');
     }
 }
+

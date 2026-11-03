@@ -30,7 +30,7 @@
     <!-- Données structurées Schema.org JSON-LD (CollectionPage) -->
     <script type="application/ld+json">
     {
-      "@context": "https://schema.org",
+      "@@context": "https://schema.org",
       "@type": "CollectionPage",
       "name": "Catalogue des Talents & Prestations Vérifiées",
       "description": "Explorez notre catalogue de talents audités en Afrique francophone.",
