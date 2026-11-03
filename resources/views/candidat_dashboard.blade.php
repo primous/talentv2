@@ -2,7 +2,7 @@
 <html lang="fr" class="scroll-smooth">
 <head>
     <meta charset="utf-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
     <title>Espace Talent — Tableau de Bord & Back-office | Talent Club</title>
     <!-- Favicon -->
     <link rel="icon" type="image/x-icon" href="{{ asset('favicon.ico') }}">
@@ -50,6 +50,21 @@
 
     <style>
         [x-cloak] { display: none !important; }
+        /* Empêcher le zoom automatique intempestif d'iOS Safari au focus des champs */
+        @media screen and (max-width: 768px) {
+            input[type="text"],
+            input[type="email"],
+            input[type="tel"],
+            input[type="number"],
+            input[type="password"],
+            input[type="search"],
+            input[type="url"],
+            select,
+            textarea {
+                font-size: 16px !important;
+            }
+        }
+
         body { font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background-color: #F7F7F8; color: #111111; }
         h1, h2, h3, h4, h5, h6, .font-heading { font-family: 'Inter', sans-serif; letter-spacing: -0.025em; }
         .tc-logo-text { font-family: 'Inter', sans-serif; font-weight: 900; letter-spacing: -0.04em; }

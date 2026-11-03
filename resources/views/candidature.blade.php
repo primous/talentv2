@@ -2,7 +2,7 @@
 <html lang="fr" class="scroll-smooth" x-data="candidatureApp()">
 <head>
     <meta charset="utf-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
     <title>Candidature & Référencement de Talent — Talent Club</title>
     <meta name="description" content="Rejoignez le réseau des talents vérifiés Talent Club. Formulaire de candidature progressif, conditionnel et orienté vers les preuves.">
     <!-- Favicon -->
@@ -49,6 +49,21 @@
 
     <style>
         [x-cloak] { display: none !important; }
+        /* Empêcher le zoom automatique intempestif d'iOS Safari au focus des champs */
+        @media screen and (max-width: 768px) {
+            input[type="text"],
+            input[type="email"],
+            input[type="tel"],
+            input[type="number"],
+            input[type="password"],
+            input[type="search"],
+            input[type="url"],
+            select,
+            textarea {
+                font-size: 16px !important;
+            }
+        }
+
         body { font-family: 'Montserrat', sans-serif; color: #111111; background-color: #FAF8F2; }
         .tc-logo-text { font-family: 'Montserrat', 'Inter', sans-serif; font-weight: 900; letter-spacing: -0.04em; line-height: 0.9; }
         input, select, textarea, button { border-radius: 0px !important; }

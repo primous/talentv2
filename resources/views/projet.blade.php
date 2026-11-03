@@ -2,7 +2,7 @@
 <html lang="fr" class="scroll-smooth">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>{{ $service['title'] }} | Talent Club Pro</title>
     <meta name="description" content="{{ $service['description'] }}">
 
@@ -71,6 +71,21 @@
 
     <style>
         [x-cloak] { display: none !important; }
+        /* Empêcher le zoom automatique intempestif d'iOS Safari au focus des champs */
+        @media screen and (max-width: 768px) {
+            input[type="text"],
+            input[type="email"],
+            input[type="tel"],
+            input[type="number"],
+            input[type="password"],
+            input[type="search"],
+            input[type="url"],
+            select,
+            textarea {
+                font-size: 16px !important;
+            }
+        }
+
         body {
             font-family: 'Montserrat', sans-serif;
             background-color: #FFFFFF;
