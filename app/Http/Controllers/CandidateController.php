@@ -2089,6 +2089,7 @@ class CandidateController extends Controller
             }
 
             Auth::login($user, $request->boolean('remember'));
+            $request->session()->regenerate();
             if ($user->isAdmin()) {
                 return redirect()->route('admin.dashboard');
             }
@@ -2135,12 +2136,21 @@ class CandidateController extends Controller
      */
     public function submitActivation(Request $request, $id)
     {
+        $passwordRule = \Illuminate\Validation\Rules\Password::min(12)
+            ->letters()
+            ->mixedCase()
+            ->numbers()
+            ->symbols();
+
+        if (!app()->runningUnitTests()) {
+            $passwordRule = $passwordRule->uncompromised();
+        }
+
         $request->validate([
             'token' => 'required|string',
-            'password' => 'required|string|min:8|confirmed',
+            'password' => ['required', 'string', 'confirmed', $passwordRule],
         ], [
             'password.required' => 'Le mot de passe est obligatoire.',
-            'password.min' => 'Le mot de passe doit comporter au moins 8 caractères.',
             'password.confirmed' => 'La confirmation du mot de passe ne correspond pas.',
         ]);
 

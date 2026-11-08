@@ -780,23 +780,23 @@
                 orderStep: {{ (!empty($errors) && $errors->any()) ? 1 : 1 }},
                 stepError: '',
                 isSubmitting: false,
-                clientName: {!! json_encode(old('client_name', '')) !!},
-                clientCompany: {!! json_encode(old('client_company', '')) !!},
-                clientEmail: {!! json_encode(old('client_email', '')) !!},
-                clientPhone: {!! json_encode(old('client_phone', '')) !!},
-                projectTitle: {!! json_encode(old('title', $service['title'] ?? '')) !!},
-                needDescription: {!! json_encode(old('need_description', '')) !!},
-                expectedDeliverable: {!! json_encode(old('expected_deliverable', '')) !!},
-                budget: {!! json_encode(old('budget', $service['price'] ?? '')) !!},
-                deadline: {!! json_encode(old('deadline', $service['delivery_time'] ?? '')) !!},
-                targetAudienceContext: {!! json_encode(old('target_audience_context', '')) !!},
-                providedElements: {!! json_encode(old('provided_elements', '')) !!},
-                constraintsToAvoid: {!! json_encode(old('constraints_to_avoid', '')) !!},
-                priorities: {!! json_encode(old('priorities', '')) !!},
-                successCriteria: {!! json_encode(old('success_criteria', '')) !!},
-                validator: {!! json_encode(old('validator', '')) !!},
-                referenceLinks: {!! json_encode(old('reference_links', old('specs_link', ''))) !!},
-                additionalNotes: {!! json_encode(old('additional_notes', '')) !!},
+                clientName: @js(old('client_name', '')),
+                clientCompany: @js(old('client_company', '')),
+                clientEmail: @js(old('client_email', '')),
+                clientPhone: @js(old('client_phone', '')),
+                projectTitle: @js(old('title', $service['title'] ?? '')),
+                needDescription: @js(old('need_description', '')),
+                expectedDeliverable: @js(old('expected_deliverable', '')),
+                budget: @js(old('budget', $service['price'] ?? '')),
+                deadline: @js(old('deadline', $service['delivery_time'] ?? '')),
+                targetAudienceContext: @js(old('target_audience_context', '')),
+                providedElements: @js(old('provided_elements', '')),
+                constraintsToAvoid: @js(old('constraints_to_avoid', '')),
+                priorities: @js(old('priorities', '')),
+                successCriteria: @js(old('success_criteria', '')),
+                validator: @js(old('validator', '')),
+                referenceLinks: @js(old('reference_links', old('specs_link', ''))),
+                additionalNotes: @js(old('additional_notes', '')),
 
                 nextOrderStep() {
                     this.stepError = '';
@@ -867,7 +867,7 @@
 
                 // Galerie multimédia active
                 activeGalleryIndex: 0,
-                gallery: {!! json_encode($service['gallery'] ?? [$service['image']], JSON_UNESCAPED_SLASHES) !!},
+                gallery: @js($service['gallery'] ?? [$service['image']]),
                 setGallery(idx) {
                     this.activeGalleryIndex = idx;
                 },
@@ -877,7 +877,7 @@
                 basePrice: {{ (int) ($service['price_num'] ?? 0) }},
                 baseDays: {{ (int) ($service['delivery_days'] ?? 0) }},
                 selectedOptions: [],
-                optionsList: {!! json_encode($service['options'] ?? []) !!},
+                optionsList: @js($service['options'] ?? []),
 
                 toggleOption(optId) {
                     if (this.selectedOptions.includes(optId)) {
@@ -927,13 +927,13 @@
 
                 // Formulaire de commande & modale
                 formData: {
-                    name: {!! json_encode(old('client_name', '')) !!},
-                    company: {!! json_encode(old('client_company', '')) !!},
-                    email: {!! json_encode(old('client_email', '')) !!},
-                    whatsapp: {!! json_encode(old('client_phone', '')) !!},
-                    deadline: {!! json_encode(old('deadline', '')) !!},
-                    brief: {!! json_encode(old('need_description', '')) !!},
-                    specsLink: {!! json_encode(old('specs_link', '')) !!}
+                    name: @js(old('client_name', '')),
+                    company: @js(old('client_company', '')),
+                    email: @js(old('client_email', '')),
+                    whatsapp: @js(old('client_phone', '')),
+                    deadline: @js(old('deadline', '')),
+                    brief: @js(old('need_description', '')),
+                    specsLink: @js(old('specs_link', ''))
                 },
 
                 openOrder() {
