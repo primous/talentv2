@@ -10,7 +10,17 @@ class PlatformContent extends Model
 {
     use HasFactory;
 
-    protected $guarded = ['id'];
+    protected $fillable = [
+        'candidate_id',
+        'title',
+        'type',
+        'file_or_url',
+        'category',
+        'description',
+        'status',
+        'report_reason',
+        'verified_by',
+    ];
 
     public function candidate(): BelongsTo
     {

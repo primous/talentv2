@@ -12,7 +12,17 @@ class CompetencyDecisionLog extends Model
 
     public $timestamps = false;
 
-    protected $guarded = ['id'];
+    protected $fillable = [
+        'talent_competency_id',
+        'candidate_name',
+        'competency_name',
+        'admin_name',
+        'action',
+        'proofs_consulted',
+        'score_given',
+        'decision_motif',
+        'created_at',
+    ];
 
     protected function casts(): array
     {

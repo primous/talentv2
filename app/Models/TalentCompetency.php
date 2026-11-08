@@ -12,7 +12,33 @@ class TalentCompetency extends Model
 {
     use HasFactory;
 
-    protected $guarded = ['id'];
+    protected $fillable = [
+        'candidate_id',
+        'name',
+        'category',
+        'description',
+        'status',
+        'score',
+        'level',
+        'proof_summary',
+        'practical_test_notes',
+        'decision_motif',
+        'decision_date',
+        'verified_by',
+        'thumbnail',
+        'is_certified',
+        'price',
+        'delivery_time',
+        'service_description',
+        'target_audience',
+        'problem_solved',
+        'deliverables',
+        'workflow_steps',
+        'prerequisites',
+        'exclusions',
+        'faq',
+        'is_custom',
+    ];
 
     protected function casts(): array
     {

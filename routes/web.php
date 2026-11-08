@@ -790,12 +790,12 @@ Route::get('/lang/{locale}', function (string $locale, \Illuminate\Http\Request 
 Route::get('/talents', [\App\Http\Controllers\CandidateController::class, 'catalog'])->name('talents');
 
 Route::get('/prestation/{id}', [\App\Http\Controllers\CandidateController::class, 'showPrestation'])->name('prestation.show');
-Route::post('/prestation/{id?}', [\App\Http\Controllers\CandidateController::class, 'storeProjectRequest']);
+Route::post('/prestation/{id?}', [\App\Http\Controllers\CandidateController::class, 'storeProjectRequest'])->middleware('throttle:10,1');
 Route::post('/prestation/{id}/avis', [\App\Http\Controllers\CandidateController::class, 'storePrestationReview'])->name('prestation.reviews.store')->middleware('throttle:10,1');
 
 Route::get('/projet/{id?}', [\App\Http\Controllers\CandidateController::class, 'showProject'])->name('projet');
-Route::post('/projet', [\App\Http\Controllers\CandidateController::class, 'storeProjectRequest'])->name('projet.store');
-Route::post('/projet/{id?}', [\App\Http\Controllers\CandidateController::class, 'storeProjectRequest']);
+Route::post('/projet', [\App\Http\Controllers\CandidateController::class, 'storeProjectRequest'])->name('projet.store')->middleware('throttle:10,1');
+Route::post('/projet/{id?}', [\App\Http\Controllers\CandidateController::class, 'storeProjectRequest'])->middleware('throttle:10,1');
 
 // --- ESPACE SUIVI CLIENT SANS COMPTE (LIEN SÉCURISÉ) ---
 Route::get('/mes-demandes', [\App\Http\Controllers\ClientPortalController::class, 'index'])->name('client.demandes.index');
@@ -810,45 +810,49 @@ Route::post('/mes-demandes/deconnexion', [\App\Http\Controllers\ClientPortalCont
 
 // --- CANDIDATURE & PROCESSUS D'INTÉGRATION ---
 Route::get('/candidature', [\App\Http\Controllers\CandidateController::class, 'create'])->name('candidature.create');
-Route::post('/candidature', [\App\Http\Controllers\CandidateController::class, 'store'])->name('candidature.store');
+Route::post('/candidature', [\App\Http\Controllers\CandidateController::class, 'store'])->name('candidature.store')->middleware('throttle:10,1');
 Route::get('/candidature/confirmation', [\App\Http\Controllers\CandidateController::class, 'success'])->name('candidature.success');
 
 // --- ESPACE CANDIDAT & SUIVI EN TEMPS RÉEL ---
 Route::get('/login', [\App\Http\Controllers\CandidateController::class, 'showLoginForm'])->name('login');
-Route::post('/login', [\App\Http\Controllers\CandidateController::class, 'login'])->name('login.submit');
-Route::get('/candidat/dashboard', [\App\Http\Controllers\CandidateController::class, 'dashboard'])->name('candidat.dashboard');
+Route::post('/login', [\App\Http\Controllers\CandidateController::class, 'login'])->name('login.submit')->middleware('throttle:5,1');
 Route::get('/candidat/login', [\App\Http\Controllers\CandidateController::class, 'showLoginForm'])->name('candidat.login');
-Route::post('/candidat/login', [\App\Http\Controllers\CandidateController::class, 'login'])->name('candidat.login.submit');
+Route::post('/candidat/login', [\App\Http\Controllers\CandidateController::class, 'login'])->name('candidat.login.submit')->middleware('throttle:5,1');
 Route::post('/candidat/logout', [\App\Http\Controllers\CandidateController::class, 'logout'])->name('candidat.logout');
 
 Route::get('/candidat/activer/{id}', [\App\Http\Controllers\CandidateController::class, 'showActivationForm'])->name('candidat.activate');
-Route::post('/candidat/activer/{id}', [\App\Http\Controllers\CandidateController::class, 'submitActivation'])->name('candidat.activate.submit');
+Route::post('/candidat/activer/{id}', [\App\Http\Controllers\CandidateController::class, 'submitActivation'])->name('candidat.activate.submit')->middleware('throttle:6,1');
 
-Route::post('/candidat/profil/update', [\App\Http\Controllers\CandidateController::class, 'updateProfile'])->name('candidat.profil.update');
-Route::post('/candidat/competence/store', [\App\Http\Controllers\CandidateController::class, 'storeCompetency'])->name('candidat.competence.store');
-Route::post('/candidat/competence/{id}/update', [\App\Http\Controllers\CandidateController::class, 'updateCompetency'])->name('candidat.competence.update');
-Route::delete('/candidat/competence/{id}', [\App\Http\Controllers\CandidateController::class, 'destroyCompetency'])->name('candidat.competence.destroy');
-Route::post('/candidat/realisation/store', [\App\Http\Controllers\CandidateController::class, 'storeRealization'])->name('candidat.realisation.store');
-Route::post('/candidat/demandes/{id}/repondre', [\App\Http\Controllers\CandidateController::class, 'respondToRequest'])->name('candidat.demandes.respond');
-Route::get('/candidat/demandes/{id}', [\App\Http\Controllers\CandidateController::class, 'showRequest'])->name('candidat.demandes.show');
-Route::post('/candidat/parametres/update', [\App\Http\Controllers\CandidateController::class, 'updateSettings'])->name('candidat.parametres.update');
+Route::middleware(['auth'])->group(function () {
+    Route::get('/candidat/dashboard', [\App\Http\Controllers\CandidateController::class, 'dashboard'])->name('candidat.dashboard');
+    Route::post('/candidat/profil/update', [\App\Http\Controllers\CandidateController::class, 'updateProfile'])->name('candidat.profil.update');
+    Route::post('/candidat/competence/store', [\App\Http\Controllers\CandidateController::class, 'storeCompetency'])->name('candidat.competence.store');
+    Route::post('/candidat/competence/{id}/update', [\App\Http\Controllers\CandidateController::class, 'updateCompetency'])->name('candidat.competence.update');
+    Route::delete('/candidat/competence/{id}', [\App\Http\Controllers\CandidateController::class, 'destroyCompetency'])->name('candidat.competence.destroy');
+    Route::post('/candidat/realisation/store', [\App\Http\Controllers\CandidateController::class, 'storeRealization'])->name('candidat.realisation.store');
+    Route::post('/candidat/demandes/{id}/repondre', [\App\Http\Controllers\CandidateController::class, 'respondToRequest'])->name('candidat.demandes.respond');
+    Route::get('/candidat/demandes/{id}', [\App\Http\Controllers\CandidateController::class, 'showRequest'])->name('candidat.demandes.show');
+    Route::post('/candidat/parametres/update', [\App\Http\Controllers\CandidateController::class, 'updateSettings'])->name('candidat.parametres.update');
 
-// Suivi interactif d'une mission par le talent
-Route::get('/candidat/projets/{id}/suivi', [\App\Http\Controllers\CandidateController::class, 'projectTracking'])->name('candidat.projets.tracking');
-Route::post('/candidat/projets/{id}/etapes', [\App\Http\Controllers\CandidateController::class, 'storeProjectStep'])->name('candidat.projets.steps.store');
-Route::post('/candidat/projets/{id}/etapes/{stepId}', [\App\Http\Controllers\CandidateController::class, 'updateProjectStep'])->name('candidat.projets.steps.update');
-Route::delete('/candidat/projets/{id}/etapes/{stepId}', [\App\Http\Controllers\CandidateController::class, 'destroyProjectStep'])->name('candidat.projets.steps.destroy');
-Route::post('/candidat/projets/{id}/etapes/{stepId}/terminer', [\App\Http\Controllers\CandidateController::class, 'completeProjectStep'])->name('candidat.projets.steps.complete');
-Route::post('/candidat/projets/{id}/etapes/{stepId}/demander-action', [\App\Http\Controllers\CandidateController::class, 'requestClientAction'])->name('candidat.projets.steps.request_action');
-Route::post('/candidat/projets/{id}/etapes/reordonner', [\App\Http\Controllers\CandidateController::class, 'reorderProjectSteps'])->name('candidat.projets.steps.reorder');
+    // Suivi interactif d'une mission par le talent
+    Route::get('/candidat/projets/{id}/suivi', [\App\Http\Controllers\CandidateController::class, 'projectTracking'])->name('candidat.projets.tracking');
+    Route::post('/candidat/projets/{id}/etapes', [\App\Http\Controllers\CandidateController::class, 'storeProjectStep'])->name('candidat.projets.steps.store');
+    Route::post('/candidat/projets/{id}/etapes/{stepId}', [\App\Http\Controllers\CandidateController::class, 'updateProjectStep'])->name('candidat.projets.steps.update');
+    Route::delete('/candidat/projets/{id}/etapes/{stepId}', [\App\Http\Controllers\CandidateController::class, 'destroyProjectStep'])->name('candidat.projets.steps.destroy');
+    Route::post('/candidat/projets/{id}/etapes/{stepId}/terminer', [\App\Http\Controllers\CandidateController::class, 'completeProjectStep'])->name('candidat.projets.steps.complete');
+    Route::post('/candidat/projets/{id}/etapes/{stepId}/demander-action', [\App\Http\Controllers\CandidateController::class, 'requestClientAction'])->name('candidat.projets.steps.request_action');
+    Route::post('/candidat/projets/{id}/etapes/reordonner', [\App\Http\Controllers\CandidateController::class, 'reorderProjectSteps'])->name('candidat.projets.steps.reorder');
+});
+
+// Téléchargement sécurisé de fichier mission avec vérification de droits stricte (403 si non autorisé)
 Route::get('/candidat/projets/{id}/etapes/{stepId}/fichier/{type}/{fileIndex?}', [\App\Http\Controllers\CandidateController::class, 'downloadProjectStepFile'])->name('candidat.projets.steps.download_file');
 
 // --- BACKOFFICE & DASHBOARD ADMINISTRATEUR ---
 Route::get('/admin/login', [\App\Http\Controllers\AdminController::class, 'showLoginForm'])->name('admin.login');
-Route::post('/admin/login', [\App\Http\Controllers\AdminController::class, 'login'])->name('admin.login.submit');
+Route::post('/admin/login', [\App\Http\Controllers\AdminController::class, 'login'])->name('admin.login.submit')->middleware('throttle:5,1');
 Route::match(['GET', 'POST'], '/admin/logout', [\App\Http\Controllers\AdminController::class, 'logout'])->name('admin.logout');
 
-Route::prefix('admin')->group(function () {
+Route::prefix('admin')->middleware(['auth', 'admin'])->group(function () {
     Route::get('/', [\App\Http\Controllers\AdminController::class, 'index'])->name('admin.dashboard');
     Route::get('/candidatures', [\App\Http\Controllers\AdminController::class, 'index'])->name('admin.candidatures.index');
     Route::get('/candidatures/{id}', [\App\Http\Controllers\AdminController::class, 'show'])->name('admin.candidatures.show');

@@ -10,7 +10,20 @@ class PrestationReview extends Model
 {
     use HasFactory;
 
-    protected $guarded = ['id'];
+    protected $fillable = [
+        'talent_competency_id',
+        'candidate_id',
+        'author_name',
+        'email',
+        'rating',
+        'comment',
+        'status',
+        'moderated_by',
+        'moderated_at',
+        'moderation_notes',
+        'ip_address',
+        'user_agent',
+    ];
 
     protected function casts(): array
     {

@@ -10,7 +10,43 @@ class ProjectRequest extends Model
 {
     use HasFactory;
 
-    protected $guarded = ['id'];
+    protected $fillable = [
+        'reference',
+        'client_name',
+        'client_email',
+        'client_phone',
+        'client_company',
+        'candidate_id',
+        'talent_competency_id',
+        'title',
+        'category',
+        'need_description',
+        'budget',
+        'deadline',
+        'status',
+        'client_contacted_at',
+        'talent_responded_at',
+        'talent_response_notes',
+        'mission_confirmed_at',
+        'completed_at',
+        'admin_notes',
+        'expected_deliverable',
+        'reference_links',
+        'craft_questions',
+        'target_audience_context',
+        'provided_elements',
+        'constraints_to_avoid',
+        'priorities',
+        'success_criteria',
+        'validator',
+        'additional_notes',
+        'client_confirmation_sent_at',
+        'talent_notification_sent_at',
+        'client_decision_notified_at',
+        'email_error_log',
+        'created_at',
+        'updated_at',
+    ];
 
     protected function casts(): array
     {

@@ -11,7 +11,14 @@ class AdminActivityLog extends Model
 
     public $timestamps = false;
 
-    protected $guarded = ['id'];
+    protected $fillable = [
+        'admin_name',
+        'action',
+        'section',
+        'details',
+        'ip_address',
+        'created_at',
+    ];
 
     protected function casts(): array
     {

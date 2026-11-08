@@ -10,7 +10,31 @@ class ProjectStep extends Model
 {
     use HasFactory;
 
-    protected $guarded = ['id'];
+    protected $fillable = [
+        'project_request_id',
+        'title',
+        'description',
+        'step_type',
+        'position',
+        'status',
+        'due_date',
+        'completed_at',
+        'link_url',
+        'payment_amount',
+        'payment_motive',
+        'payment_url',
+        'deliverable_file_path',
+        'deliverable_file_name',
+        'deliverable_file_size',
+        'deliverable_files',
+        'client_response_text',
+        'client_file_path',
+        'client_file_name',
+        'client_file_size',
+        'client_files',
+        'client_validated_at',
+        'history',
+    ];
 
     protected function casts(): array
     {

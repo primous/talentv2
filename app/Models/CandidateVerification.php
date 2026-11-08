@@ -10,7 +10,13 @@ class CandidateVerification extends Model
 {
     use HasFactory;
 
-    protected $guarded = ['id'];
+    protected $fillable = [
+        'candidate_id',
+        'admin_name',
+        'action',
+        'message',
+        'score_snapshot',
+    ];
 
     public function candidate(): BelongsTo
     {
