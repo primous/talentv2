@@ -1968,6 +1968,9 @@
 
                     <form method="POST" action="{{ route('projet.store') }}" id="order-form" class="space-y-4">
                         @csrf
+                        <div class="hidden" aria-hidden="true" style="display:none !important;">
+                            <input type="text" name="_hp_check" value="" tabindex="-1" autocomplete="off">
+                        </div>
                         <input type="hidden" name="candidate_id" value="{{ $service['candidate_id'] ?? ($cand->id ?? '') }}">
                         <input type="hidden" name="talent_competency_id" value="{{ $service['competency_id'] ?? '' }}">
                         <input type="hidden" name="category" value="{{ $service['category'] ?? '' }}">

@@ -362,6 +362,9 @@
             class="bg-white border-2 border-black p-6 sm:p-10 shadow-lg"
         >
             @csrf
+            <div class="hidden" aria-hidden="true" style="display:none !important;">
+                <input type="text" name="_hp_check" value="" tabindex="-1" autocomplete="off">
+            </div>
 
             <!-- ======================================================================= -->
             <!-- ÉTAPE 1 — IDENTITÉ ET COORDONNÉES -->

@@ -14,9 +14,10 @@ class SecurityStep3HeadersAndSessionTest extends TestCase
         $response = $this->get('/');
 
         $response->assertHeader('X-Content-Type-Options', 'nosniff');
-        $response->assertHeader('X-Frame-Options', 'SAMEORIGIN');
+        $response->assertHeader('X-Frame-Options', 'DENY');
         $response->assertHeader('Referrer-Policy', 'strict-origin-when-cross-origin');
         $response->assertHeader('Permissions-Policy');
+        $response->assertHeader('Content-Security-Policy');
         $response->assertHeader('Content-Security-Policy-Report-Only');
     }
 
@@ -30,3 +31,4 @@ class SecurityStep3HeadersAndSessionTest extends TestCase
         $response->assertHeader('Strict-Transport-Security', 'max-age=31536000; includeSubDomains');
     }
 }
+

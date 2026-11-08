@@ -2682,12 +2682,13 @@
                                 </svg>
                             </a>
 
-                            <!-- 3. Icône Email Imposante (Enveloppe pleine robuste, style ligne 2 col 3) -->
+                            <!-- 3. Icône Email Imposante (Protégée contre le Dorking et scraping) -->
                             <a 
-                                href="mailto:yenickoprimous@gmail.com"
+                                href="javascript:void(0)"
+                                @click="window.location.href = atob('bWFpbHRvOnllbmlja29wcmltb3VzQGdtYWlsLmNvbQ==')"
                                 class="w-14 h-14 sm:w-16 sm:h-16 rounded-none border-2 border-neutral-700 hover:border-blue-400 bg-[#181818] hover:bg-blue-600 active:bg-blue-600 text-white hover:text-white active:text-white flex items-center justify-center transition-all duration-150 shadow-xl touch-manipulation active:scale-95 group select-none"
-                                title="Envoyer un email (yenickoprimous@gmail.com)"
-                                aria-label="Envoyer un email"
+                                title="Envoyer un e-mail à l'équipe"
+                                aria-label="Envoyer un e-mail"
                             >
                                 <svg class="w-7 h-7 sm:w-8 sm:h-8 fill-current transition-transform duration-150 group-hover:scale-110 group-active:scale-90" viewBox="0 0 24 24">
                                     <path d="M20 4H4c-1.11 0-1.99.89-1.99 2L2 18c0 1.11.89 2 2 2h16c1.11 0 2-.89 2-2V6c0-1.11-.89-2-2-2zm0 4l-8 5-8-5V6l8 5 8-5v2z"/>
@@ -2998,6 +2999,9 @@
 
             <form method="POST" action="{{ route('projet.store') }}" class="mt-6 space-y-4">
                 @csrf
+                <div style="display:none !important;" aria-hidden="true">
+                    <input type="text" name="_hp_check" value="" tabindex="-1" autocomplete="off">
+                </div>
                 <input type="hidden" name="candidate_id" :value="selectedCandidateId || '{{ $defaultCandidate->id ?? 1 }}'">
                 <input type="hidden" name="title" :value="selectedTalent ? ('Demande de projet pour ' + selectedTalent) : 'Demande d\'accompagnement & Cadrage de projet'">
                 <input type="hidden" name="category" value="Conseil & Cadrage de projet">

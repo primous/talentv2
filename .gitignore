@@ -1,6 +1,15 @@
 *.log
+*.sql
+*.bak
+*.zip
+*.tar.gz
+*.tgz
+*.rar
+id_rsa*
 .DS_Store
 .env
+.env.*
+!.env.example
 .env.backup
 .env.production
 .phpactor.json
@@ -18,6 +27,8 @@
 /public/storage
 /storage/*.key
 /storage/pail
+/storage/app/backups/*
+!/storage/app/backups/.gitignore
 /vendor
 Homestead.json
 Homestead.yaml

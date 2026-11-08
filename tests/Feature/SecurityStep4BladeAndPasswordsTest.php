@@ -65,3 +65,4 @@ class SecurityStep4BladeAndPasswordsTest extends TestCase
         $this->assertStringNotContainsString('{!! json_encode', $response->getContent());
     }
 }
+

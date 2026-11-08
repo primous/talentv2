@@ -4,3 +4,4 @@ Preferred-Languages: fr, en
 Policy: https://talentv2.vercel.app/security-policy
 Canonical: https://talentv2.vercel.app/.well-known/security.txt
 Acknowledgments: https://talentv2.vercel.app/hall-of-fame
+

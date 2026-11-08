@@ -20,8 +20,8 @@ class SecurityHeaders
         // 1. Prévention du détournement de type MIME
         $response->headers->set('X-Content-Type-Options', 'nosniff');
 
-        // 2. Protection contre le Clickjacking (encadrement dans des iframes non autorisées)
-        $response->headers->set('X-Frame-Options', 'SAMEORIGIN');
+        // 2. Protection contre le Clickjacking (interdiction totale d'encadrement en iframe)
+        $response->headers->set('X-Frame-Options', 'DENY');
 
         // 3. Politique de transmission du Referrer
         $response->headers->set('Referrer-Policy', 'strict-origin-when-cross-origin');
@@ -34,19 +34,26 @@ class SecurityHeaders
             $response->headers->set('Strict-Transport-Security', 'max-age=31536000; includeSubDomains');
         }
 
-        // 6. Content-Security-Policy (Mode Report-Only adapté aux dépendances du projet)
+        // 6. Content-Security-Policy (Directive stricte adaptée à la stack Laravel Blade / Alpine.js)
         $cspPolicy = implode('; ', [
             "default-src 'self'",
-            "script-src 'self' 'unsafe-inline' 'unsafe-eval' https://cdn.jsdelivr.net https://unpkg.com",
+            "script-src 'self' 'unsafe-inline' 'unsafe-eval' https://cdn.jsdelivr.net https://unpkg.com https://cdn.tailwindcss.com",
             "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
             "font-src 'self' https://fonts.gstatic.com data:",
-            "img-src 'self' data: https://images.unsplash.com",
+            "img-src 'self' data: https://images.unsplash.com https:",
             "connect-src 'self'",
-            "frame-ancestors 'self'",
+            "frame-ancestors 'none'",
             "form-action 'self'",
         ]);
+        $response->headers->set('Content-Security-Policy', $cspPolicy);
         $response->headers->set('Content-Security-Policy-Report-Only', $cspPolicy);
+
+        // 7. Directive Anti-Google Dorking : noindex sur les interfaces privées et sensibles
+        if ($request->is('admin*', 'candidat*', 'login*', 'register*', 'mes-demandes*', 'up*')) {
+            $response->headers->set('X-Robots-Tag', 'noindex, nofollow, noarchive');
+        }
 
         return $response;
     }
 }
+

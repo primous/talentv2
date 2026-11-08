@@ -100,3 +100,4 @@ class SecurityStep2AccessControlTest extends TestCase
         $response->assertStatus(429);
     }
 }
+

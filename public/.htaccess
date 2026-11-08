@@ -5,6 +5,15 @@
 
     RewriteEngine On
 
+    # 1. RÈGLE CRITIQUE ANTI-GOOGLE DORKING : Bloquer l'accès aux fichiers cachés (.env, .git, etc.) sauf .well-known
+    RewriteRule ^\.(?!well-known) - [F,L,NC]
+
+    # 2. Bloquer les extensions sensibles et fichiers de sauvegardes
+    RewriteRule \.(env|log|sql|bak|key|phar|sh|yml|yaml|json|lock|md)$ - [F,L,NC]
+
+    # 3. Interdire formellement l'exécution directe de scripts PHP dans le dossier de stockage
+    RewriteRule ^storage/.*\.php$ - [F,L,NC]
+
     # Handle Authorization Header
     RewriteCond %{HTTP:Authorization} .
     RewriteRule .* - [E=HTTP_AUTHORIZATION:%{HTTP:Authorization}]
@@ -22,4 +31,10 @@
     RewriteCond %{REQUEST_FILENAME} !-d
     RewriteCond %{REQUEST_FILENAME} !-f
     RewriteRule ^ index.php [L]
+</IfModule>
+
+# Masquer la signature serveur Apache
+<IfModule mod_headers.c>
+    Header unset X-Powered-By
+    ServerSignature Off
 </IfModule>

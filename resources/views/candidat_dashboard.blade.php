@@ -2678,9 +2678,9 @@
                     <span>📱 WhatsApp Support :</span>
                     <strong class="font-mono text-black">+225 07 00 00 00 00</strong>
                 </div>
-                <div class="flex items-center gap-2 text-neutral-700">
+                <div class="flex items-center gap-2 text-neutral-700" x-data="{ secureEmail: atob('dGFsZW50c0B0YWxlbnRjbHViLmNp') }">
                     <span>✉️ Email dédié :</span>
-                    <strong class="font-mono text-black">talents@talentclub.ci</strong>
+                    <strong class="font-mono text-black" x-text="secureEmail"></strong>
                 </div>
             </div>
 

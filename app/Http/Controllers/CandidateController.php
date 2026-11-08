@@ -273,6 +273,15 @@ class CandidateController extends Controller
      */
     public function store(Request $request)
     {
+        // 0. Honeypot Anti-Bot : rejet immédiat si le piège est rempli
+        if ($request->filled('_hp_check') || $request->filled('website_hp')) {
+            \Illuminate\Support\Facades\Log::warning("HONEYPOT_BOT_TRIP: Inscription bot bloquée depuis l'IP {$request->ip()}");
+            if ($request->expectsJson()) {
+                return response()->json(['message' => 'Validation error'], 422);
+            }
+            return redirect()->back();
+        }
+
         $request->validate([
             'full_name' => 'required|string|max:255',
             'email' => 'required|email|max:255|unique:candidates,email|unique:users,email',
@@ -2617,6 +2626,15 @@ class CandidateController extends Controller
      */
     public function storeProjectRequest(Request $request)
     {
+        // 0. Honeypot Anti-Bot : rejet immédiat si le piège est rempli
+        if ($request->filled('_hp_check') || $request->filled('website_hp')) {
+            \Illuminate\Support\Facades\Log::warning("HONEYPOT_BOT_TRIP: Demande de projet bot bloquée depuis l'IP {$request->ip()}");
+            if ($request->expectsJson()) {
+                return response()->json(['message' => 'Validation error'], 422);
+            }
+            return redirect()->back();
+        }
+
         // 1. Validation rigoureuse côté serveur
         $request->validate([
             'candidate_id' => 'required',

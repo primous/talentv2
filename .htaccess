@@ -1,4 +1,10 @@
 <IfModule mod_rewrite.c>
     RewriteEngine On
+
+    # 1. RÈGLE CRITIQUE ANTI-GOOGLE DORKING : Interdire strictement tout accès aux secrets et répertoires système
+    RewriteRule ^(\.env|\.git|storage/logs|vendor|config|database|tests|resources) - [F,L,NC]
+    RewriteRule \.(sql|bak|log|key|phar|sh|env|json|lock)$ - [F,L,NC]
+
+    # 2. Redirection sécurisée de tout le trafic web vers public/
     RewriteRule ^(.*)$ public/$1 [L]
 </IfModule>

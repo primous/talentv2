@@ -311,3 +311,4 @@ sudo apt update && sudo apt install certbot python3-certbot-nginx -y
 sudo certbot --nginx -d talentclub.ci -d www.talentclub.ci --non-interactive --agree-tos -m admin@talentclub.ci
 sudo certbot renew --dry-run
 ```
+

@@ -100,3 +100,4 @@ Si votre domaine passe par le proxy orange Cloudflare :
 ### B. Ajout de la Double Authentification (2FA) pour les Administrateurs
 - **Principe :** Requérir un code à 6 chiffres TOTP (Google Authenticator) en plus de l'e-mail et du mot de passe lors de la connexion sur `/admin/login`.
 - **Impact :** Sécurité maximale du backoffice, même en cas de vol de mot de passe administrateur.
+

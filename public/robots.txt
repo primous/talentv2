@@ -2,11 +2,19 @@ User-agent: *
 Allow: /
 Disallow: /admin
 Disallow: /admin/
-Disallow: /candidat/dashboard
-Disallow: /candidat/activer/
+Disallow: /candidat/
 Disallow: /mes-demandes
 Disallow: /mes-demandes/
 Disallow: /login
 Disallow: /up
+Disallow: /.env
+Disallow: /.git
+Disallow: /.git/
+Disallow: /backup/
+Disallow: /storage/
+Disallow: /config/
+Disallow: /database/
+Disallow: /vendor/
+Disallow: /logs/
 
 Sitemap: https://talentv2.vercel.app/sitemap.xml

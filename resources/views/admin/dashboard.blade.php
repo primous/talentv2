@@ -2397,7 +2397,7 @@
 
             <div>
                 <h3 class="font-heading font-black text-base text-tcDark">Direction & Validation</h3>
-                <p class="text-xs text-neutral-400 mt-1 font-mono">admin@talentclub.ci</p>
+                <p class="text-xs text-neutral-400 mt-1 font-mono">{{ auth()->user()->email ?? 'administrateur' }}</p>
                 <span class="inline-block mt-2 px-3 py-0.5 rounded-full bg-tcYellow/20 text-tcDark font-extrabold text-[11px]">
                     Commission d'Agrément
                 </span>

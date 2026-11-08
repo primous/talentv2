@@ -76,8 +76,8 @@
                         name="email" 
                         required 
                         autofocus
-                        placeholder="admin@talentclub.ci" 
-                        value="{{ old('email', 'admin@talentclub.ci') }}"
+                        placeholder="administrateur@domaine.com" 
+                        value="{{ old('email') }}"
                         class="w-full h-11 px-4 rounded-xl border border-neutral-300 focus:border-tcYellow focus:ring-2 focus:ring-tcYellow/20 outline-none text-xs transition-all text-black"
                     >
                 </div>
@@ -91,7 +91,6 @@
                         name="password" 
                         required 
                         placeholder="••••••••" 
-                        value="admin1234"
                         class="w-full h-11 px-4 rounded-xl border border-neutral-300 focus:border-tcYellow focus:ring-2 focus:ring-tcYellow/20 outline-none text-xs transition-all text-black"
                     >
                 </div>
@@ -101,7 +100,6 @@
                         <input type="checkbox" name="remember" checked class="rounded border-neutral-300 text-tcYellow focus:ring-tcYellow">
                         <span>Rester connecté</span>
                     </label>
-                    <span class="text-[11px] text-neutral-400 font-mono">Démo : admin1234</span>
                 </div>
 
                 <div class="pt-2">

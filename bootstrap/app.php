@@ -12,7 +12,9 @@ return Application::configure(basePath: dirname(__DIR__))
     )
     ->withMiddleware(function (Middleware $middleware): void {
         $middleware->trustProxies(at: '*');
+        $middleware->prepend(\App\Http\Middleware\DetectMaliciousProbes::class);
         $middleware->web(append: [
+            'throttle:global-web',
             \App\Http\Middleware\SetLocale::class,
             \App\Http\Middleware\SecurityHeaders::class,
         ]);

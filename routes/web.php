@@ -790,12 +790,12 @@ Route::get('/lang/{locale}', function (string $locale, \Illuminate\Http\Request 
 Route::get('/talents', [\App\Http\Controllers\CandidateController::class, 'catalog'])->name('talents');
 
 Route::get('/prestation/{id}', [\App\Http\Controllers\CandidateController::class, 'showPrestation'])->name('prestation.show');
-Route::post('/prestation/{id?}', [\App\Http\Controllers\CandidateController::class, 'storeProjectRequest'])->middleware('throttle:10,1');
-Route::post('/prestation/{id}/avis', [\App\Http\Controllers\CandidateController::class, 'storePrestationReview'])->name('prestation.reviews.store')->middleware('throttle:10,1');
+Route::post('/prestation/{id?}', [\App\Http\Controllers\CandidateController::class, 'storeProjectRequest'])->middleware('throttle:3,10');
+Route::post('/prestation/{id}/avis', [\App\Http\Controllers\CandidateController::class, 'storePrestationReview'])->name('prestation.reviews.store')->middleware('throttle:3,10');
 
 Route::get('/projet/{id?}', [\App\Http\Controllers\CandidateController::class, 'showProject'])->name('projet');
-Route::post('/projet', [\App\Http\Controllers\CandidateController::class, 'storeProjectRequest'])->name('projet.store')->middleware('throttle:10,1');
-Route::post('/projet/{id?}', [\App\Http\Controllers\CandidateController::class, 'storeProjectRequest'])->middleware('throttle:10,1');
+Route::post('/projet', [\App\Http\Controllers\CandidateController::class, 'storeProjectRequest'])->name('projet.store')->middleware('throttle:3,10');
+Route::post('/projet/{id?}', [\App\Http\Controllers\CandidateController::class, 'storeProjectRequest'])->middleware('throttle:3,10');
 
 // --- ESPACE SUIVI CLIENT SANS COMPTE (LIEN SÉCURISÉ) ---
 Route::get('/mes-demandes', [\App\Http\Controllers\ClientPortalController::class, 'index'])->name('client.demandes.index');
@@ -810,18 +810,18 @@ Route::post('/mes-demandes/deconnexion', [\App\Http\Controllers\ClientPortalCont
 
 // --- CANDIDATURE & PROCESSUS D'INTÉGRATION ---
 Route::get('/candidature', [\App\Http\Controllers\CandidateController::class, 'create'])->name('candidature.create');
-Route::post('/candidature', [\App\Http\Controllers\CandidateController::class, 'store'])->name('candidature.store')->middleware('throttle:10,1');
+Route::post('/candidature', [\App\Http\Controllers\CandidateController::class, 'store'])->name('candidature.store')->middleware('throttle:3,60');
 Route::get('/candidature/confirmation', [\App\Http\Controllers\CandidateController::class, 'success'])->name('candidature.success');
 
 // --- ESPACE CANDIDAT & SUIVI EN TEMPS RÉEL ---
 Route::get('/login', [\App\Http\Controllers\CandidateController::class, 'showLoginForm'])->name('login');
-Route::post('/login', [\App\Http\Controllers\CandidateController::class, 'login'])->name('login.submit')->middleware('throttle:5,1');
+Route::post('/login', [\App\Http\Controllers\CandidateController::class, 'login'])->name('login.submit')->middleware('throttle:5,15');
 Route::get('/candidat/login', [\App\Http\Controllers\CandidateController::class, 'showLoginForm'])->name('candidat.login');
-Route::post('/candidat/login', [\App\Http\Controllers\CandidateController::class, 'login'])->name('candidat.login.submit')->middleware('throttle:5,1');
+Route::post('/candidat/login', [\App\Http\Controllers\CandidateController::class, 'login'])->name('candidat.login.submit')->middleware('throttle:5,15');
 Route::post('/candidat/logout', [\App\Http\Controllers\CandidateController::class, 'logout'])->name('candidat.logout');
 
 Route::get('/candidat/activer/{id}', [\App\Http\Controllers\CandidateController::class, 'showActivationForm'])->name('candidat.activate');
-Route::post('/candidat/activer/{id}', [\App\Http\Controllers\CandidateController::class, 'submitActivation'])->name('candidat.activate.submit')->middleware('throttle:6,1');
+Route::post('/candidat/activer/{id}', [\App\Http\Controllers\CandidateController::class, 'submitActivation'])->name('candidat.activate.submit')->middleware('throttle:3,60');
 
 Route::middleware(['auth'])->group(function () {
     Route::get('/candidat/dashboard', [\App\Http\Controllers\CandidateController::class, 'dashboard'])->name('candidat.dashboard');
@@ -849,7 +849,7 @@ Route::get('/candidat/projets/{id}/etapes/{stepId}/fichier/{type}/{fileIndex?}',
 
 // --- BACKOFFICE & DASHBOARD ADMINISTRATEUR ---
 Route::get('/admin/login', [\App\Http\Controllers\AdminController::class, 'showLoginForm'])->name('admin.login');
-Route::post('/admin/login', [\App\Http\Controllers\AdminController::class, 'login'])->name('admin.login.submit')->middleware('throttle:5,1');
+Route::post('/admin/login', [\App\Http\Controllers\AdminController::class, 'login'])->name('admin.login.submit')->middleware('throttle:5,15');
 Route::match(['GET', 'POST'], '/admin/logout', [\App\Http\Controllers\AdminController::class, 'logout'])->name('admin.logout');
 
 Route::prefix('admin')->middleware(['auth', 'admin'])->group(function () {
