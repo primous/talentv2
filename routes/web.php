@@ -820,7 +820,6 @@ Route::get('/candidat/dashboard', [\App\Http\Controllers\CandidateController::cl
 Route::get('/candidat/login', [\App\Http\Controllers\CandidateController::class, 'showLoginForm'])->name('candidat.login');
 Route::post('/candidat/login', [\App\Http\Controllers\CandidateController::class, 'login'])->name('candidat.login.submit');
 Route::post('/candidat/logout', [\App\Http\Controllers\CandidateController::class, 'logout'])->name('candidat.logout');
-Route::get('/candidat/login/demo', [\App\Http\Controllers\CandidateController::class, 'demoLogin'])->name('candidat.login.demo');
 
 Route::get('/candidat/activer/{id}', [\App\Http\Controllers\CandidateController::class, 'showActivationForm'])->name('candidat.activate');
 Route::post('/candidat/activer/{id}', [\App\Http\Controllers\CandidateController::class, 'submitActivation'])->name('candidat.activate.submit');
@@ -873,27 +872,46 @@ Route::prefix('admin')->group(function () {
     Route::post('/parametres/update', [\App\Http\Controllers\AdminController::class, 'updatePlatformSettings'])->name('admin.parametres.update');
 });
 
-// --- DISTRIBUTION SÉCURISÉE DES FICHIERS DU DISQUE /storage (Compatible Serverless Vercel) ---
+// --- DISTRIBUTION SÉCURISÉE DES FICHIERS DU DISQUE /storage (Protection Path Traversal & Serverless Vercel) ---
 Route::get('/storage/{path}', function ($path) {
-    // 1. Priorité au dossier storage public standard de Laravel
-    $storagePath = storage_path('app/public/' . $path);
-    if (file_exists($storagePath) && is_file($storagePath)) {
-        return response()->file($storagePath);
+    // 1. Rejet strict des tentatives de traversée de chemin (Directory Traversal)
+    if (str_contains($path, '..') || str_contains($path, "\0") || str_starts_with($path, '/') || str_starts_with($path, '\\')) {
+        abort(404);
     }
 
-    // 2. Vérification dans le répertoire temporaire de Vercel /tmp
-    $tmpPath = '/tmp/storage/app/public/' . $path;
-    if (file_exists($tmpPath) && is_file($tmpPath)) {
-        return response()->file($tmpPath);
+    // 2. Blocage strict des fichiers sensibles et scripts exécutables
+    $extension = strtolower(pathinfo($path, PATHINFO_EXTENSION));
+    $blockedExtensions = ['php', 'phtml', 'phar', 'env', 'git', 'gitignore', 'htaccess', 'sqlite', 'sh', 'bat', 'cmd', 'config', 'yml', 'yaml', 'json', 'lock'];
+    if (in_array($extension, $blockedExtensions, true) || str_starts_with(basename($path), '.')) {
+        abort(404);
     }
 
-    // 3. Vérification dans public/storage (si fichiers statiques)
-    $publicPath = public_path('storage/' . $path);
-    if (file_exists($publicPath) && is_file($publicPath)) {
-        return response()->file($publicPath);
+    $candidates = [
+        storage_path('app/public/' . $path),
+        '/tmp/storage/app/public/' . $path,
+        public_path('storage/' . $path),
+    ];
+
+    $allowedRoots = array_filter([
+        realpath(storage_path('app/public')),
+        realpath('/tmp/storage/app/public'),
+        realpath(public_path('storage')),
+    ]);
+
+    foreach ($candidates as $candidate) {
+        if (file_exists($candidate) && is_file($candidate)) {
+            $realCandidate = realpath($candidate);
+            if ($realCandidate !== false) {
+                foreach ($allowedRoots as $root) {
+                    if (str_starts_with($realCandidate, $root . DIRECTORY_SEPARATOR) || $realCandidate === $root) {
+                        return response()->file($realCandidate);
+                    }
+                }
+            }
+        }
     }
 
     abort(404);
-})->where('path', '.*')->name('storage.local');
+})->where('path', '^[a-zA-Z0-9_\-\.\/]+$')->name('storage.local');
 
 

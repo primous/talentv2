@@ -81,7 +81,7 @@ class CatalogAuthenticReviewsTest extends TestCase
 
         // Vérifier dans le HTML la présence de l'état authentique
         $response->assertSee('Aucun avis pour le moment');
-        $this->assertEquals(route('prestation.show', $competency->id), $service['prestation_url']);
+        $this->assertEquals(route('prestation.show', $competency->getSlugParam()), $service['prestation_url']);
         $response->assertSee(':href="serv.prestation_url + \'#avis-clients\'"', false);
         $response->assertDontSee('(46 avis)');
     }
@@ -143,7 +143,7 @@ class CatalogAuthenticReviewsTest extends TestCase
         $this->assertTrue($service['has_reviews']);
 
         // Vérifier l'affichage du lien vers la section d'avis
-        $this->assertEquals(route('prestation.show', $competency->id), $service['prestation_url']);
+        $this->assertEquals(route('prestation.show', $competency->getSlugParam()), $service['prestation_url']);
         $response->assertSee(':href="serv.prestation_url + \'#avis-clients\'"', false);
     }
 

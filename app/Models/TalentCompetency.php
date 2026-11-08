@@ -29,6 +29,15 @@ class TalentCompetency extends Model
     }
 
     /**
+     * Identifiant SEO avec slug pour les URLs canoniques
+     */
+    public function getSlugParam(): string
+    {
+        $slug = \Illuminate\Support\Str::slug($this->name);
+        return $this->id . ($slug ? '-' . $slug : '');
+    }
+
+    /**
      * Dictionnaire des 9 catégories officielles et compétences prédéfinies
      */
     public static function getOfficialCategoriesWithSkills(): array

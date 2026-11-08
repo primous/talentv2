@@ -26,7 +26,6 @@ class User extends Authenticatable
         'role',
         'is_active',
         'candidate_code',
-        'temp_access_key',
     ];
 
     /**
@@ -37,6 +36,7 @@ class User extends Authenticatable
     protected $hidden = [
         'password',
         'remember_token',
+        'temp_access_key',
     ];
 
     /**

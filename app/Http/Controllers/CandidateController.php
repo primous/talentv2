@@ -295,6 +295,13 @@ class CandidateController extends Controller
             'confirmed_authentic_work' => 'accepted',
             'authorized_verification' => 'accepted',
             'agreed_public_profile_policy' => 'accepted',
+            'profile_photo' => 'nullable|file|mimes:jpeg,png,jpg,webp|max:5120',
+            'profile_photo_url' => 'nullable|string|max:1000',
+            'business_logo' => 'nullable|file|mimes:jpeg,png,jpg,webp|max:5120',
+            'business_photo' => 'nullable|file|mimes:jpeg,png,jpg,webp|max:5120',
+            'realization_file' => 'nullable|file|mimes:pdf,jpeg,png,jpg,webp|max:10240',
+            'additional_proof_file' => 'nullable|file|mimes:pdf,jpeg,png,jpg,webp|max:10240',
+            'diploma_certification_file' => 'nullable|file|mimes:pdf,jpeg,png,jpg,webp|max:10240',
         ], [
             'full_name.required' => 'Le nom et prénom sont obligatoires.',
             'email.required' => 'Votre adresse e-mail est obligatoire.',
@@ -311,6 +318,19 @@ class CandidateController extends Controller
             'confirmed_authentic_work.accepted' => 'Veuillez confirmer que les réalisations correspondent à votre travail.',
             'authorized_verification.accepted' => 'L’autorisation d’examen par Talent Club est obligatoire.',
             'agreed_public_profile_policy.accepted' => 'L’accord de publication conditionnelle est obligatoire.',
+            'profile_photo.file' => 'La photo de profil doit être un fichier valide.',
+            'profile_photo.mimes' => 'La photo de profil doit être une image au format JPEG, PNG, JPG ou WEBP.',
+            'profile_photo.max' => 'La photo de profil ne doit pas dépasser 5 Mo.',
+            'business_logo.mimes' => 'Le logo doit être une image au format JPEG, PNG, JPG ou WEBP.',
+            'business_logo.max' => 'Le logo ne doit pas dépasser 5 Mo.',
+            'business_photo.mimes' => 'La photo d’activité doit être une image au format JPEG, PNG, JPG ou WEBP.',
+            'business_photo.max' => 'La photo d’activité ne doit pas dépasser 5 Mo.',
+            'realization_file.mimes' => 'La réalisation principale doit être au format PDF ou image (JPEG, PNG, JPG, WEBP).',
+            'realization_file.max' => 'La réalisation principale ne doit pas dépasser 10 Mo.',
+            'additional_proof_file.mimes' => 'La preuve complémentaire doit être au format PDF ou image (JPEG, PNG, JPG, WEBP).',
+            'additional_proof_file.max' => 'La preuve complémentaire ne doit pas dépasser 10 Mo.',
+            'diploma_certification_file.mimes' => 'Le diplôme ou certificat doit être au format PDF ou image (JPEG, PNG, JPG, WEBP).',
+            'diploma_certification_file.max' => 'Le diplôme ou certificat ne doit pas dépasser 10 Mo.',
         ]);
 
         $email = trim($request->input('email'));
@@ -2028,21 +2048,11 @@ class CandidateController extends Controller
     }
 
     /**
-     * Connexion démo 1-clic pour les tests
+     * Connexion démo désactivée en production pour des raisons de sécurité
      */
     public function demoLogin($email = 'yannick.dev@talentclub.ci')
     {
-        $user = User::where('email', $email)->first();
-        if (!$user) {
-            $user = User::where('role', 'candidate')->first();
-        }
-
-        if ($user) {
-            Auth::login($user);
-            return redirect()->route('candidat.dashboard');
-        }
-
-        return redirect()->route('candidat.login');
+        abort(404);
     }
 
     /**
