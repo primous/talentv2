@@ -193,3 +193,4 @@ En cas de compromission avérée ou de détection d'une activité anormale :
    ```
 5. **Si la clé `APP_KEY` a fuité :**
    Générer une nouvelle clé (`php artisan key:generate`) et rechiffrer les données sensibles correspondantes.
+

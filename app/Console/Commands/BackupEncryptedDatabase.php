@@ -95,3 +95,4 @@ class BackupEncryptedDatabase extends Command
         }
     }
 }
+

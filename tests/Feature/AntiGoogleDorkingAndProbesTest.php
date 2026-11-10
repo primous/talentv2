@@ -116,3 +116,4 @@ class AntiGoogleDorkingAndProbesTest extends TestCase
         $this->assertStringContainsString('Disallow: /config/', $robotsContent);
     }
 }
+
