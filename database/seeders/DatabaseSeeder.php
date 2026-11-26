@@ -7,6 +7,7 @@ use App\Models\CandidateVerification;
 use App\Models\User;
 use Illuminate\Database\Seeder;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Str;
 
 class DatabaseSeeder extends Seeder
 {
@@ -15,15 +16,26 @@ class DatabaseSeeder extends Seeder
      */
     public function run(): void
     {
+        // Données de démonstration : jamais en production.
+        if (app()->isProduction()) {
+            $this->command?->error('DatabaseSeeder refusé en production (comptes de démonstration).');
+
+            return;
+        }
+
+        // Aucun mot de passe en clair dans le dépôt : variable d'environnement ou valeur aléatoire.
+        $adminPassword = (string) (env('SEED_ADMIN_PASSWORD') ?: Str::password(16));
+        $demoPassword = (string) (env('SEED_DEMO_PASSWORD') ?: Str::password(12));
+
         // 1. Administrateur principal Talent Club
         $admin = User::updateOrCreate(
             ['email' => 'admin@talentclub.ci'],
             [
                 'name' => 'Direction & Commission de Validation',
-                'password' => Hash::make('admin1234'),
+                'password' => Hash::make($adminPassword),
                 'role' => 'admin',
                 'candidate_code' => 'TC-ADMIN-001',
-                'temp_access_key' => 'admin1234',
+                'temp_access_key' => $adminPassword,
             ]
         );
 
@@ -32,10 +44,10 @@ class DatabaseSeeder extends Seeder
             ['email' => 'mariam.couture@gmail.com'],
             [
                 'name' => 'Mariam Traoré',
-                'password' => Hash::make('Talent#2026'),
+                'password' => Hash::make($demoPassword),
                 'role' => 'candidate',
                 'candidate_code' => 'TC-CAND-40912',
-                'temp_access_key' => 'Talent#2026',
+                'temp_access_key' => $demoPassword,
             ]
         );
 
@@ -121,10 +133,10 @@ class DatabaseSeeder extends Seeder
             ['email' => 'yannick.dev@talentclub.ci'],
             [
                 'name' => 'Yannick Koffi',
-                'password' => Hash::make('Talent#8841'),
+                'password' => Hash::make($demoPassword),
                 'role' => 'candidate',
                 'candidate_code' => 'TC-CAND-88412',
-                'temp_access_key' => 'Talent#8841',
+                'temp_access_key' => $demoPassword,
             ]
         );
 
@@ -216,10 +228,10 @@ class DatabaseSeeder extends Seeder
             ['email' => 'amina.design@talentclub.ci'],
             [
                 'name' => 'Amina Sow',
-                'password' => Hash::make('Talent#3091'),
+                'password' => Hash::make($demoPassword),
                 'role' => 'candidate',
                 'candidate_code' => 'TC-CAND-30915',
-                'temp_access_key' => 'Talent#3091',
+                'temp_access_key' => $demoPassword,
             ]
         );
 
@@ -289,10 +301,10 @@ class DatabaseSeeder extends Seeder
             ['email' => 'marc.video@talentclub.ci'],
             [
                 'name' => 'Kouadio Marc',
-                'password' => Hash::make('Talent#4012'),
+                'password' => Hash::make($demoPassword),
                 'role' => 'candidate',
                 'candidate_code' => 'TC-CAND-40128',
-                'temp_access_key' => 'Talent#4012',
+                'temp_access_key' => $demoPassword,
             ]
         );
 
@@ -359,10 +371,10 @@ class DatabaseSeeder extends Seeder
             ['email' => 'aicha.copy@talentclub.ci'],
             [
                 'name' => 'Aïcha Bakayoko',
-                'password' => Hash::make('Talent#5019'),
+                'password' => Hash::make($demoPassword),
                 'role' => 'candidate',
                 'candidate_code' => 'TC-CAND-50193',
-                'temp_access_key' => 'Talent#5019',
+                'temp_access_key' => $demoPassword,
             ]
         );
 
@@ -429,10 +441,10 @@ class DatabaseSeeder extends Seeder
             ['email' => 'david.dev@talentclub.ci'],
             [
                 'name' => 'David N’Guessan',
-                'password' => Hash::make('Talent#6081'),
+                'password' => Hash::make($demoPassword),
                 'role' => 'candidate',
                 'candidate_code' => 'TC-CAND-60814',
-                'temp_access_key' => 'Talent#6081',
+                'temp_access_key' => $demoPassword,
             ]
         );
 
@@ -466,5 +478,8 @@ class DatabaseSeeder extends Seeder
 
         // Appel du seeder d'administration pour injecter les compétences, contenus et demandes de projet
         $this->call(AdminDataSeeder::class);
+
+        $this->command?->warn('Admin admin@talentclub.ci / mot de passe : '.$adminPassword);
+        $this->command?->warn('Candidats de démo / mot de passe : '.$demoPassword);
     }
 }

@@ -176,7 +176,8 @@ php artisan app:backup-encrypted --keep=30
 En cas de compromission avérée ou de détection d'une activité anormale :
 1. **Activer immédiatement le mode maintenance :**
    ```bash
-   php artisan down --secret="code-acces-urgence-2026" --render="errors.503"
+   php artisan down --with-secret --render="errors.503"
+   # Laravel génère un code d'accès aléatoire : ne jamais l'écrire dans le dépôt.
    ```
 2. **Révoquer toutes les sessions actives :**
    ```bash
